@@ -44,7 +44,8 @@ MIN_CHARACTERS = 100
 
 def _reader(settings: Settings) -> WhitelistDocumentReader:
     return WhitelistDocumentReader(settings.project_root, settings.max_document_bytes,
-                                   settings.ingestion_manifest, settings.max_pdf_bytes)
+                                   settings.ingestion_manifest, settings.max_pdf_bytes,
+                                   settings.runtime_upload_manifest)
 
 
 def _version_id(entry: ManifestEntry) -> str:

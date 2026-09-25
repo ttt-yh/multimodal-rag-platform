@@ -29,7 +29,8 @@ def activate_index(settings: Settings, index_version_id: str) -> dict:
         scope_ids = sorted(_processing_scope(manifest, processing_id))
         approved = conn.execute(
             "SELECT processing_version_id FROM mrag.processing_versions "
-            "WHERE processing_version_id = ANY(%s) AND quality_status='approved'",
+            "WHERE processing_version_id = ANY(%s) AND quality_status='approved' "
+            "AND release_status <> 'retired'",
             (scope_ids,),
         ).fetchall()
         if len(approved) != len(scope_ids):
@@ -42,12 +43,22 @@ def activate_index(settings: Settings, index_version_id: str) -> dict:
         ).fetchone()
         if current:
             current_scope = _processing_scope(current[2], current[1])
-            if not current_scope.issubset(set(scope_ids)):
-                raise AppError(
-                    "index_scope_regression",
-                    "待激活索引未包含当前知识范围；如需下线知识，请使用独立的显式退役流程",
-                    409,
-                )
+            omitted = sorted(current_scope - set(scope_ids))
+            if omitted:
+                retired = conn.execute(
+                    """SELECT pv.processing_version_id
+                       FROM mrag.processing_versions pv
+                       JOIN mrag.document_versions dv
+                         ON dv.document_id=pv.document_id AND dv.version_id=pv.version_id
+                       WHERE pv.processing_version_id = ANY(%s) AND dv.status='retired'""",
+                    (omitted,),
+                ).fetchall()
+                if {row[0] for row in retired} != set(omitted):
+                    raise AppError(
+                        "index_scope_regression",
+                        "待激活索引未包含当前知识范围；只有显式下线的文档才能从索引移除",
+                        409,
+                    )
         artifact_path = (settings.project_root / artifact).resolve()
         if not artifact_path.is_relative_to(settings.project_root) or not artifact_path.is_dir():
             raise AppError("index_artifact_missing", "索引产物目录不存在或不在项目目录内", 409)

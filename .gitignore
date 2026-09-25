@@ -12,6 +12,7 @@ __pycache__/
 data/raw/
 !data/raw/
 data/raw/*
+data/manifests/runtime_uploads.jsonl
 !data/raw/pdf_samples/
 data/raw/pdf_samples/*
 !data/raw/pdf_samples/three-node-deployment-sample.pdf

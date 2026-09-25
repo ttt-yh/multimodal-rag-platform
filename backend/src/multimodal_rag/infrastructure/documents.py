@@ -31,23 +31,51 @@ class ManifestEntry(Model):
 class WhitelistDocumentReader:
     def __init__(self, root: Path, max_bytes: int,
                  manifest_path: str = "data/manifests/ingestion_chinese_md.jsonl",
-                 max_pdf_bytes: int = 20_971_520):
+                 max_pdf_bytes: int = 20_971_520,
+                 runtime_manifest_path: str = "data/manifests/runtime_uploads.jsonl"):
         self.root = root.resolve()
         # 正式白名单可以组合多个公开数据源；安全边界是 data/raw，而不是某个
         # TiDB 子目录。客户端仍然不能提交任意本地路径。
         self.source_root = (self.root / "data/raw").resolve()
-        manifest_root = (self.root / "data/manifests").resolve()
-        relative = Path(manifest_path)
-        # manifest 只能来自项目内的 manifests 目录，避免配置项变成任意文件读取入口。
-        if (relative.is_absolute() or PureWindowsPath(manifest_path).drive or
-                ".." in relative.parts or "\\" in manifest_path or ":" in manifest_path):
-            raise AppError("unsafe_manifest", "入库白名单路径不在允许范围内", 403)
-        candidate = (self.root / relative).resolve()
-        if not candidate.is_relative_to(manifest_root) or candidate.suffix.lower() != ".jsonl":
-            raise AppError("unsafe_manifest", "入库白名单必须位于 data/manifests 目录且为 JSONL", 403)
-        self.manifest = candidate
+        self.manifest_root = (self.root / "data/manifests").resolve()
+        self.manifest = self._manifest_path(manifest_path)
+        self.runtime_manifest = self._manifest_path(runtime_manifest_path)
         self.max_bytes = max_bytes
         self.max_pdf_bytes = max_pdf_bytes
+
+    def _manifest_path(self, value: str) -> Path:
+        relative = Path(value)
+        # manifest 只能来自项目内的 manifests 目录，避免配置项变成任意文件读取入口。
+        if (relative.is_absolute() or PureWindowsPath(value).drive or
+                ".." in relative.parts or "\\" in value or ":" in value):
+            raise AppError("unsafe_manifest", "入库白名单路径不在允许范围内", 403)
+        candidate = (self.root / relative).resolve()
+        if not candidate.is_relative_to(self.manifest_root) or candidate.suffix.lower() != ".jsonl":
+            raise AppError("unsafe_manifest", "入库白名单必须位于 data/manifests 目录且为 JSONL", 403)
+        return candidate
+
+    def _entries(self) -> list[ManifestEntry]:
+        """Load the immutable corpus manifest plus the optional runtime upload catalog."""
+        rows: list[ManifestEntry] = []
+        paths = ((self.manifest, True), (self.runtime_manifest, False))
+        try:
+            for path, required in paths:
+                if not path.exists() and not required:
+                    continue
+                lines = path.read_text(encoding="utf-8").splitlines()
+                for line in lines:
+                    if not line.strip():
+                        continue
+                    raw = json.loads(line)
+                    if not isinstance(raw, dict):
+                        raise ValueError("invalid manifest row")
+                    rows.append(ManifestEntry(**{k: raw[k] for k in ManifestEntry.model_fields}))
+        except (OSError, ValueError, KeyError, TypeError, ValidationError):
+            raise AppError("manifest_unavailable", "开发文档白名单缺失或格式异常", 503) from None
+        identifiers = [row.document_id for row in rows]
+        if len(identifiers) != len(set(identifiers)):
+            raise AppError("manifest_conflict", "白名单文档编号重复", 409)
+        return rows
 
     def list_allowed(self) -> list[ManifestEntry]:
         """Return discoverable development documents without reading their bodies.
@@ -56,36 +84,11 @@ class WhitelistDocumentReader:
         authoritative path for hash, size, encoding and source-root checks
         immediately before a document is queued.
         """
-        try:
-            lines = self.manifest.read_text(encoding="utf-8").splitlines()
-            entries: list[ManifestEntry] = []
-            for line in lines:
-                if not line.strip():
-                    continue
-                row = json.loads(line)
-                if not isinstance(row, dict):
-                    raise ValueError("invalid manifest row")
-                entry = ManifestEntry(**{k: row[k] for k in ManifestEntry.model_fields})
-                if entry.split == "dev" and entry.format in {"md", "txt", "pdf"}:
-                    entries.append(entry)
-            return entries
-        except (OSError, ValueError, KeyError, TypeError, ValidationError):
-            raise AppError("manifest_unavailable", "开发文档白名单缺失或格式异常", 503) from None
+        return [entry for entry in self._entries()
+                if entry.split == "dev" and entry.format in {"md", "txt", "pdf"}]
 
     def _entry(self, document_id: str) -> ManifestEntry:
-        try:
-            lines = self.manifest.read_text(encoding="utf-8").splitlines()
-            entries = []
-            for line in lines:
-                if not line.strip():
-                    continue
-                row = json.loads(line)
-                if not isinstance(row, dict):
-                    raise ValueError("invalid manifest row")
-                if row.get("document_id") == document_id:
-                    entries.append(ManifestEntry(**{k: row[k] for k in ManifestEntry.model_fields}))
-        except (OSError, ValueError, KeyError, TypeError, ValidationError):
-            raise AppError("manifest_unavailable", "开发文档白名单缺失或格式异常", 503) from None
+        entries = [entry for entry in self._entries() if entry.document_id == document_id]
         if not entries:
             raise AppError("document_not_allowed", "文档不在预览白名单中", 404)
         if len(entries) != 1:

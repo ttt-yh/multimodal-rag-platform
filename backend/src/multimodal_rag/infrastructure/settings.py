@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(default=200, ge=1, le=500)
     # 入库白名单相对项目根目录配置；默认值保持现有 0A/阶段1行为。
     ingestion_manifest: str = "data/manifests/ingestion_chinese_md.jsonl"
+    # 网页上传只登记到独立运行时清单，避免修改随代码发布的基准数据清单。
+    runtime_upload_manifest: str = "data/manifests/runtime_uploads.jsonl"
     postgres_dsn: SecretStr = SecretStr("")
     parser_api_key: SecretStr = SecretStr("")
     chat_api_key: SecretStr = SecretStr("")

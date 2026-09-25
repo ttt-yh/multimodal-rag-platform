@@ -10,7 +10,8 @@ from multimodal_rag.infrastructure.text_parser import PARSER_VERSION, parse_text
 
 def preview_document(document_id: str, settings: Settings) -> PreviewResult:
     entry, text = WhitelistDocumentReader(
-        settings.project_root, settings.max_document_bytes, settings.ingestion_manifest
+        settings.project_root, settings.max_document_bytes, settings.ingestion_manifest,
+        settings.max_pdf_bytes, settings.runtime_upload_manifest,
     ).read(document_id)
     document = Document(document_id=entry.document_id, title=entry.title,
                         knowledge_base=entry.knowledge_base, source_path=entry.path,

@@ -92,19 +92,37 @@ def build_real_indexes_for_processing_versions(settings: Settings,
 
 def build_incremental_index_from_active(settings: Settings,
                                         added_processing_version_ids: list[str], *,
-                                        max_requests: int = 1) -> dict:
+                                        max_requests: int = 1,
+                                        exclude_retired: bool = False) -> dict:
     """Extend the active index while reusing all unchanged dense vectors.
 
     BM25 and the target Chroma collection are rebuilt as immutable artifacts,
     but only chunks absent from the active collection are sent to Embedding.
     """
     added_ids = sorted(set(added_processing_version_ids))
-    if not added_ids:
+    if not added_ids and not exclude_retired:
         raise ValueError("至少需要一个新增 processing_version_id")
     active = get_active_index(settings)
     manifest = active.get("manifest") or {}
     active_scope = sorted(set(manifest.get("processing_version_ids") or
                               [active["processing_version_id"]]))
+    original_active_scope = list(active_scope)
+    if exclude_retired:
+        with connection(settings, read_only=True) as conn:
+            rows = conn.execute(
+                """SELECT pv.processing_version_id
+                   FROM mrag.processing_versions pv
+                   JOIN mrag.document_versions dv
+                     ON dv.document_id=pv.document_id AND dv.version_id=pv.version_id
+                   WHERE pv.processing_version_id = ANY(%s)
+                     AND pv.release_status <> 'retired'
+                     AND dv.status <> 'retired'""",
+                (active_scope,),
+            ).fetchall()
+        retained_scope = sorted(row[0] for row in rows)
+        if set(retained_scope) == set(active_scope):
+            raise AppError("no_retired_versions", "当前活动索引没有需要下线的文档", 409)
+        active_scope = retained_scope
     if set(added_ids) & set(active_scope):
         raise AppError("processing_version_already_active", "新增处理版本已包含在当前活动索引中", 409)
     if (active["embedding_model"] != settings.embedding_model or
@@ -113,9 +131,11 @@ def build_incremental_index_from_active(settings: Settings,
         raise AppError("index_configuration_changed", "索引配置已变化，不能复用旧向量，请执行全量重建", 409)
 
     processing_ids = sorted(set(active_scope + added_ids))
-    active_chunks = load_chunks_for_processing_versions(settings, active_scope)
+    # Retired chunks are still read from the old artifact so their vectors can
+    # be ignored in the new scope without changing the active index in place.
+    active_chunks = load_chunks_for_processing_versions(settings, original_active_scope)
     added_chunks = load_chunks_for_processing_versions(settings, added_ids)
-    if not added_chunks:
+    if not added_chunks and not exclude_retired:
         raise AppError("no_new_chunks", "新增处理版本没有可索引Chunk", 409)
     if len(active_chunks) != active["chunk_count"]:
         raise AppError("active_scope_changed", "当前活动索引的Chunk范围与数据库不一致", 409)
@@ -127,10 +147,16 @@ def build_incremental_index_from_active(settings: Settings,
     active_root = (settings.project_root / active["artifact_path"]).resolve()
     if not active_root.is_relative_to(settings.project_root) or not active_root.is_dir():
         raise AppError("index_artifact_missing", "当前活动索引产物不存在", 409)
-    reused = load_chroma_embeddings(active_root, active["index_version_id"],
-                                    [chunk.chunk_id for chunk in active_chunks])
+    reused_all = load_chroma_embeddings(active_root, active["index_version_id"],
+                                       [chunk.chunk_id for chunk in active_chunks])
+    # A retirement rebuild reads the old collection for reuse, but must drop
+    # vectors belonging to versions excluded from the new manifest.
+    final_chunk_ids = {chunk.chunk_id for chunk in
+                       load_chunks_for_processing_versions(settings, active_scope + added_ids)}
+    reused = {chunk_id: vector for chunk_id, vector in reused_all.items()
+              if chunk_id in final_chunk_ids}
 
-    gateway = HttpGateway(settings, "embedding", budget=CallBudget(max_requests))
+    gateway = HttpGateway(settings, "embedding", budget=CallBudget(max_requests)) if added_chunks else None
     generated: dict[str, list[float]] = {}
     records: list[dict] = []
     try:
@@ -138,10 +164,11 @@ def build_incremental_index_from_active(settings: Settings,
             batch = added_chunks[start:start + 10]
             result = EmbeddingAdapter(gateway).embed([chunk.text for chunk in batch])
             generated.update({chunk.chunk_id: vector for chunk, vector in zip(batch, result["vectors"])})
-        records = gateway.records
+        records = gateway.records if gateway else []
     finally:
-        records = list(gateway.records)
-        gateway.close()
+        if gateway is not None:
+            records = list(gateway.records)
+            gateway.close()
     vectors_by_id = {**reused, **generated}
     if set(vectors_by_id) != set(chunk_ids):
         raise AppError("incremental_index_incomplete", "复用向量与新增向量未覆盖完整Chunk范围", 409)
@@ -161,7 +188,7 @@ def build_incremental_index_from_active(settings: Settings,
     manifest_path = write_manifest(settings.project_root, target_manifest)
     persist_index_manifest(settings, target_manifest, target_manifest["artifact_path"])
     report = {
-        "status": "built", "build_mode": "incremental_reuse",
+        "status": "built", "build_mode": "retire_rebuild" if exclude_retired else "incremental_reuse",
         "index_version_id": index_id,
         "base_index_version_id": active["index_version_id"],
         "processing_version_id": processing_ids[0],

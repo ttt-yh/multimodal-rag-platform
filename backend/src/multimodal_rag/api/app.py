@@ -3,7 +3,7 @@ import time
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, Query, Request
+from fastapi import BackgroundTasks, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +27,8 @@ from multimodal_rag.infrastructure.index_lifecycle import activate_index
 from multimodal_rag.infrastructure.release_repository import list_indexes, list_review_queue
 from multimodal_rag.infrastructure.knowledge_repository import list_knowledge
 from multimodal_rag.infrastructure.evaluation_repository import get_evaluation, list_evaluations
+from multimodal_rag.infrastructure.upload_repository import register_upload
+from multimodal_rag.infrastructure.document_lifecycle import retire_document
 
 
 class PreviewRequest(BaseModel):
@@ -81,13 +83,20 @@ class IngestionRunRequest(BaseModel):
 
 class IndexBuildRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    processing_version_ids: list[Identifier] = Field(min_length=1, max_length=100)
+    processing_version_ids: list[Identifier] = Field(default_factory=list, max_length=100)
     max_requests: int = Field(ge=1, le=128)
     confirm_live: bool = False
-    build_mode: Literal["full", "incremental_from_active"] = "full"
+    build_mode: Literal["full", "incremental_from_active", "rebuild_without_retired"] = "full"
 
 
 class IndexActivateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reviewer: str = Field(min_length=1, max_length=128)
+    notes: str = Field(min_length=1, max_length=4000)
+    confirm: bool = False
+
+
+class DocumentRetireRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reviewer: str = Field(min_length=1, max_length=128)
     notes: str = Field(min_length=1, max_length=4000)
@@ -134,7 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         return JSONResponse(status_code=422, content={"error": {
-            "code": "invalid_request", "message": "请求格式错误：仅接受合法的 document_id",
+            "code": "invalid_request", "message": "请求格式或字段取值不合法",
             "request_id": request.state.request_id}})
 
     @app.get("/health/live", tags=["health"])
@@ -163,7 +172,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                           offset: int = Query(default=0, ge=0)):
         entries = WhitelistDocumentReader(
             settings.project_root, settings.max_document_bytes, settings.ingestion_manifest,
-            settings.max_pdf_bytes,
+            settings.max_pdf_bytes, settings.runtime_upload_manifest,
         ).list_allowed()
         selected = entries[offset:offset + limit]
         return {
@@ -174,6 +183,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "pagination": {"limit": limit, "offset": offset,
                             "returned": len(selected), "total": len(entries)},
         }
+
+    @app.post("/api/v1/ingestion/uploads", tags=["ingestion"], status_code=201)
+    async def upload_ingestion_document(
+        request: Request,
+        background_tasks: BackgroundTasks,
+        filename: str = Query(min_length=1, max_length=180),
+        knowledge_base: str = Query(default="uploaded_documents", min_length=1, max_length=100),
+        title: str = Query(default="", max_length=200),
+    ):
+        """Store a browser upload in the controlled runtime area and create its durable job."""
+        declared = request.headers.get("content-length")
+        if declared:
+            try:
+                declared_size = int(declared)
+            except ValueError:
+                raise AppError("invalid_content_length", "Content-Length 不合法", 422) from None
+            if declared_size < 0 or declared_size > settings.max_pdf_bytes:
+                raise AppError("document_too_large", "上传文件超过允许的最大大小", 413)
+        payload = await request.body()
+        entry = register_upload(settings, filename, payload,
+                                knowledge_base=knowledge_base, title=title)
+        job = enqueue_document(settings, entry.document_id)
+        processing = "awaiting_external_confirmation"
+        if entry.format != "pdf":
+            # 文本解析无外部费用，可以在响应返回后自动执行；任务本身已在 PostgreSQL
+            # 持久化，进程中断后仍可由 run 接口安全重试。
+            worker_id = "upload-" + uuid4().hex
+            background_tasks.add_task(run_once, settings, worker_id, job_id=job["job_id"])
+            processing = "background"
+        return {"upload": {
+            "document_id": entry.document_id,
+            "title": entry.title,
+            "format": entry.format,
+            "source_path": entry.path,
+            "knowledge_base": entry.knowledge_base,
+            "sha256": entry.sha256,
+        }, "job": job, "processing": processing}
 
     @app.post("/api/v1/ingestion/jobs", tags=["ingestion"])
     def create_ingestion_job(body: IngestionCreateRequest):
@@ -189,7 +235,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if current.get("document_id"):
             entry, _ = WhitelistDocumentReader(
                 settings.project_root, settings.max_document_bytes, settings.ingestion_manifest,
-                settings.max_pdf_bytes,
+                settings.max_pdf_bytes, settings.runtime_upload_manifest,
             ).read_source(current["document_id"])
         gateway = None
         if entry is not None and entry.format == "pdf":
@@ -222,6 +268,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def review_processing(processing_version_id: str, body: ReviewRequest):
         return record_quality_review(settings, processing_version_id, body.reviewer, body.decision, body.notes)
 
+    @app.post("/api/v1/documents/{document_id}/retire", tags=["knowledge"])
+    def retire(document_id: str, body: DocumentRetireRequest):
+        if not body.confirm:
+            raise AppError("retirement_confirmation_required", "下线会从后续索引中移除文档，请明确确认", 422)
+        return retire_document(settings, document_id, body.reviewer, body.notes)
+
     @app.get("/api/v1/review-queue", tags=["ingestion"])
     def review_queue(state: str = Query(default="pending", pattern="^(pending|approved|all)$"),
                      limit: int = Query(default=50, ge=1, le=100),
@@ -237,6 +289,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def build_index(body: IndexBuildRequest):
         if not body.confirm_live:
             raise AppError("live_confirmation_required", "构建索引会调用Embedding，请明确确认并提供预算", 422)
+        if body.build_mode != "rebuild_without_retired" and not body.processing_version_ids:
+            raise AppError("invalid_processing_scope", "全量或增量构建至少需要一个处理版本", 422)
         from multimodal_rag.application.index_builder import (
             build_incremental_index_from_active,
             build_real_indexes_for_processing_versions,
@@ -244,6 +298,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if body.build_mode == "incremental_from_active":
             return build_incremental_index_from_active(
                 settings, body.processing_version_ids, max_requests=body.max_requests
+            )
+        if body.build_mode == "rebuild_without_retired":
+            return build_incremental_index_from_active(
+                settings, [], max_requests=body.max_requests, exclude_retired=True
             )
         return build_real_indexes_for_processing_versions(
             settings, body.processing_version_ids, max_requests=body.max_requests

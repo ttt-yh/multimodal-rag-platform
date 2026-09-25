@@ -30,6 +30,62 @@ def test_create_ingestion_job_uses_document_id_not_file_path(monkeypatch, settin
     assert response.json()["job_id"] == "job_demo"
 
 
+def test_browser_upload_registers_file_and_creates_job(monkeypatch, settings):
+    captured = {}
+
+    def fake_register(current_settings, filename, payload, *, knowledge_base, title):
+        captured.update(filename=filename, payload=payload, knowledge_base=knowledge_base, title=title)
+        return SimpleNamespace(document_id="upload_demo", title="上传示例", format="md",
+                               path="data/raw/uploads/upload_demo/a.md",
+                               knowledge_base=knowledge_base, sha256="a" * 64)
+
+    monkeypatch.setattr("multimodal_rag.api.app.register_upload", fake_register)
+    monkeypatch.setattr("multimodal_rag.api.app.enqueue_document",
+                        lambda current_settings, document_id: {"job_id": "job_upload",
+                            "document_id": document_id, "format": "md"})
+    monkeypatch.setattr("multimodal_rag.api.app.run_once",
+                        lambda current_settings, worker_id, *, job_id: captured.update(
+                            background_job_id=job_id))
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/v1/ingestion/uploads?filename=sample.md&knowledge_base=team&title=上传示例",
+            content=b"# sample", headers={"Content-Type": "application/octet-stream"},
+        )
+    assert response.status_code == 201
+    assert response.json()["job"]["job_id"] == "job_upload"
+    assert response.json()["processing"] == "background"
+    assert response.json()["upload"]["document_id"] == "upload_demo"
+    assert captured == {"filename": "sample.md", "payload": b"# sample",
+                        "knowledge_base": "team", "title": "上传示例",
+                        "background_job_id": "job_upload"}
+
+
+def test_pdf_browser_upload_does_not_start_unconfirmed_background_call(monkeypatch, settings):
+    monkeypatch.setattr("multimodal_rag.api.app.register_upload", lambda *args, **kwargs:
+                        SimpleNamespace(document_id="upload_pdf", title="PDF", format="pdf",
+                            path="data/raw/uploads/upload_pdf/a.pdf", knowledge_base="team",
+                            sha256="b" * 64))
+    monkeypatch.setattr("multimodal_rag.api.app.enqueue_document", lambda *args, **kwargs:
+                        {"job_id": "job_pdf", "document_id": "upload_pdf", "format": "pdf"})
+    monkeypatch.setattr("multimodal_rag.api.app.run_once", lambda *args, **kwargs:
+                        (_ for _ in ()).throw(AssertionError("PDF must await confirmation")))
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/ingestion/uploads?filename=sample.pdf",
+                               content=b"%PDF-sample")
+    assert response.status_code == 201
+    assert response.json()["processing"] == "awaiting_external_confirmation"
+
+
+def test_browser_upload_rejects_oversized_declared_body(settings):
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/v1/ingestion/uploads?filename=sample.pdf",
+            content=b"small", headers={"Content-Length": str(settings.max_pdf_bytes + 1)},
+        )
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "document_too_large"
+
+
 def test_run_ingestion_job_returns_current_state(monkeypatch, settings):
     monkeypatch.setattr("multimodal_rag.api.app.run_once",
                         lambda current_settings, worker_id, *, job_id: {

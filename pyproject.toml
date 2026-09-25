@@ -31,3 +31,6 @@ packages = ["backend/src/multimodal_rag"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 addopts = "-ra"
+markers = [
+  "real_data: requires the optional local development corpus and is excluded from clean CI",
+]

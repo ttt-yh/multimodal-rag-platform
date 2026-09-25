@@ -152,6 +152,7 @@ def test_image_and_region_contracts():
     assert region.page_number == 2
 
 
+@pytest.mark.real_data
 def test_real_development_document_offline():
     # 集成检查要求已备好的真实开发侧文档；没有数据时失败，不以 skip 冒充验收。
     settings = Settings(_env_file=None, project_root=PROJECT_ROOT)

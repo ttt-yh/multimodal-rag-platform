@@ -140,6 +140,8 @@ const catalogLoading = ref(false)
 const catalogEntries = ref<CatalogEntry[]>([])
 const importOpen = ref(false)
 const importDocumentId = ref('')
+const uploadFile = ref<File | null>(null)
+const uploadKnowledgeBase = ref('uploaded_documents')
 const importLoading = ref(false)
 const importError = ref('')
 const importJob = ref<IngestionJob | null>(null)
@@ -248,7 +250,16 @@ const visualItems = computed<VisualEvidence[]>(() => displayResult.value.visual_
 const selectedImportEntry = computed(() => catalogEntries.value.find(
   (entry) => entry.document_id === importDocumentId.value,
 ))
-const importRequiresParser = computed(() => selectedImportEntry.value?.format === 'pdf')
+const importRequiresParser = computed(() => (
+  uploadFile.value?.name.toLowerCase().endsWith('.pdf') || selectedImportEntry.value?.format === 'pdf'
+))
+
+function chooseUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  uploadFile.value = input.files?.[0] ?? null
+  importJob.value = null
+  importError.value = ''
+}
 
 function navigate(next: Section) {
   section.value = next
@@ -283,6 +294,7 @@ function openImportDialog() {
   importOpen.value = true
   importError.value = ''
   importJob.value = null
+  uploadFile.value = null
   parserConfirm.value = false
   if (!catalogEntries.value.length) loadCatalog()
 }
@@ -298,7 +310,7 @@ function closeImportDialog() {
 
 async function submitImport() {
   const documentId = importDocumentId.value.trim()
-  if (!documentId || importLoading.value) return
+  if ((!documentId && !uploadFile.value) || importLoading.value) return
   importLoading.value = true
   importError.value = ''
   if (importRequiresParser.value && !parserConfirm.value) {
@@ -307,13 +319,37 @@ async function submitImport() {
     return
   }
   try {
-    const createResponse = await fetch('/api/v1/ingestion/jobs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ document_id: documentId }),
-    })
-    if (!createResponse.ok) throw new Error(`create ${createResponse.status}`)
-    const created = await createResponse.json()
+    let createResponse: Response
+    if (uploadFile.value) {
+      const params = new URLSearchParams({
+        filename: uploadFile.value.name,
+        knowledge_base: uploadKnowledgeBase.value.trim() || 'uploaded_documents',
+      })
+      createResponse = await fetch(`/api/v1/ingestion/uploads?${params.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: uploadFile.value,
+      })
+    } else {
+      createResponse = await fetch('/api/v1/ingestion/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: documentId }),
+      })
+    }
+    const responseBody = await createResponse.json()
+    if (!createResponse.ok) {
+      throw new Error(responseBody?.error?.message || `创建入库任务失败（${createResponse.status}）`)
+    }
+    const created = responseBody.job ?? responseBody
+    if (responseBody.upload) {
+      const uploaded = responseBody.upload as CatalogEntry
+      catalogEntries.value = [uploaded, ...catalogEntries.value.filter(
+        (entry) => entry.document_id !== uploaded.document_id,
+      )]
+      importDocumentId.value = uploaded.document_id
+      uploadFile.value = null
+    }
     importJob.value = {
       ...created,
       operation: 'ingest',
@@ -321,15 +357,33 @@ async function submitImport() {
       stage: 'queued',
     }
 
-    await advanceImportJob()
+    if (responseBody.processing === 'background') {
+      await waitForBackgroundImport()
+    } else {
+      await advanceImportJob()
+    }
     apiStatus.value = 'online'
     await loadKnowledge()
-  } catch {
+  } catch (error) {
     apiStatus.value = 'offline'
-    importError.value = '入库任务未完成，请检查文档编号、后端服务和数据库连接。'
+    importError.value = error instanceof Error
+      ? error.message
+      : '入库任务未完成，请检查文件、后端服务和数据库连接。'
   } finally {
     importLoading.value = false
   }
+}
+
+async function waitForBackgroundImport() {
+  if (!importJob.value) return
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, 500))
+    const response = await fetch(`/api/v1/ingestion/jobs/${encodeURIComponent(importJob.value.job_id)}`)
+    if (!response.ok) throw new Error(`job ${response.status}`)
+    importJob.value = await response.json() as IngestionJob
+    if (importJob.value.status === 'succeeded' || importJob.value.status === 'failed') return
+  }
+  importError.value = '后台任务仍在处理中，可关闭窗口并稍后在知识库列表中刷新状态。'
 }
 
 async function advanceImportJob() {
@@ -374,6 +428,25 @@ async function loadKnowledge() {
     apiStatus.value = 'offline'
   } finally {
     knowledgeLoading.value = false
+  }
+}
+
+async function retireKnowledgeDocument(documentId: string, title: string) {
+  if (!window.confirm(`确认下线“${title}”吗？当前索引不会立即变化。`)) return
+  const notes = window.prompt('请输入下线原因：', '资料已过期或不再适用')
+  if (!notes?.trim()) return
+  try {
+    const response = await fetch(`/api/v1/documents/${encodeURIComponent(documentId)}/retire`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer: 'human-review', notes: notes.trim(), confirm: true }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data?.error?.message || `retire ${response.status}`)
+    await loadKnowledge()
+    errorMessage.value = '文档已下线；请构建并激活排除退役版本的新索引。'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '文档下线失败。'
   }
 }
 
@@ -740,7 +813,7 @@ checkHealth()
             <span class="status-pill" :class="importJob.status === 'succeeded' ? 'approved' : 'muted'">{{ importJob.status === 'succeeded' ? '已完成' : importJob.status === 'failed' ? '失败' : '处理中' }}</span>
             <button v-if="importJob.status === 'pending' && importRequiresParser" class="quiet-button" type="button" :disabled="importLoading" @click="advanceImportJob"><RefreshCw :class="{ spin: importLoading }" :size="15" />继续 PDF 解析</button>
           </div>
-          <div class="table-panel"><div class="table-toolbar"><div class="table-title"><h2>入库资料</h2><span>{{ knowledgeLoading ? '同步中…' : 'PostgreSQL 实时状态' }}</span></div><div class="table-actions"><select v-model="knowledgeFilter" class="filter-select" aria-label="知识库状态筛选"><option value="all">全部状态</option><option value="active">已激活</option><option value="draft">草稿 / 退役</option><option value="review">待审核</option></select><button class="quiet-button" type="button" @click="loadKnowledge"><Search :size="15" />刷新</button></div></div><table><thead><tr><th>文档</th><th>格式</th><th>Chunk</th><th>处理质量</th><th>索引状态</th></tr></thead><tbody><tr v-for="document in knowledgeDocuments" :key="document.document_id"><td><div class="doc-cell"><span class="file-icon"><FileText :size="16" /></span><div><strong>{{ document.title }}</strong><small>{{ document.source_path }}</small></div></div></td><td>{{ document.format.toUpperCase() }}</td><td>{{ document.chunk_count || '—' }}</td><td><span :class="['status-pill', document.processing.quality_status === 'approved' ? 'approved' : 'muted']">{{ document.processing.quality_status || '未处理' }}</span></td><td><span :class="['table-status', { 'muted-status': document.index.status !== 'active' }]" ><span class="status-dot" />{{ document.index.status || '未建索引' }}</span></td></tr><tr v-if="!knowledgeDocuments.length"><td colspan="5" class="empty-cell">当前筛选没有资料</td></tr></tbody></table></div>
+          <div class="table-panel"><div class="table-toolbar"><div class="table-title"><h2>入库资料</h2><span>{{ knowledgeLoading ? '同步中…' : 'PostgreSQL 实时状态' }}</span></div><div class="table-actions"><select v-model="knowledgeFilter" class="filter-select" aria-label="知识库状态筛选"><option value="all">全部状态</option><option value="active">已激活</option><option value="draft">草稿 / 退役</option><option value="review">待审核</option></select><button class="quiet-button" type="button" @click="loadKnowledge"><Search :size="15" />刷新</button></div></div><table><thead><tr><th>文档</th><th>格式</th><th>Chunk</th><th>处理质量</th><th>索引状态</th><th>操作</th></tr></thead><tbody><tr v-for="document in knowledgeDocuments" :key="document.document_id"><td><div class="doc-cell"><span class="file-icon"><FileText :size="16" /></span><div><strong>{{ document.title }}</strong><small>{{ document.source_path }}</small></div></div></td><td>{{ document.format.toUpperCase() }}</td><td>{{ document.chunk_count || '—' }}</td><td><span :class="['status-pill', document.processing.quality_status === 'approved' ? 'approved' : 'muted']">{{ document.processing.quality_status || '未处理' }}</span></td><td><span :class="['table-status', { 'muted-status': document.index.status !== 'active' }]" ><span class="status-dot" />{{ document.index.status || '未建索引' }}</span></td><td><button v-if="document.processing.release_status !== 'retired'" class="table-action table-action--danger" type="button" title="下线文档" @click="retireKnowledgeDocument(document.document_id, document.title)"><X :size="14" />下线</button><span v-else class="muted-status">已下线</span></td></tr><tr v-if="!knowledgeDocuments.length"><td colspan="6" class="empty-cell">当前筛选没有资料</td></tr></tbody></table></div>
 
           <section class="release-panel">
             <div class="release-panel-head"><div><span class="section-kicker">质量门禁</span><h2>审核队列</h2><p>审核通过后，处理版本才可以进入索引构建。</p></div><button class="quiet-button" type="button" @click="loadReviewQueue"><RefreshCw :size="15" />刷新</button></div>
@@ -777,19 +850,24 @@ checkHealth()
 
           <div v-if="importOpen" class="import-overlay" @click.self="closeImportDialog">
             <section class="import-dialog" role="dialog" aria-modal="true" aria-label="导入研发资料">
-              <header class="import-dialog-head"><div><span class="section-kicker">入库任务</span><h2>导入研发资料</h2><p>从项目白名单中选择 Markdown、TXT 或 PDF，创建可追踪的版本化入库任务。</p></div><button class="icon-button" type="button" title="关闭导入窗口" @click="closeImportDialog"><X :size="17" /></button></header>
+              <header class="import-dialog-head"><div><span class="section-kicker">入库任务</span><h2>导入研发资料</h2><p>上传本地文件或选择预置资料，创建可追踪的版本化入库任务。</p></div><button class="icon-button" type="button" title="关闭导入窗口" @click="closeImportDialog"><X :size="17" /></button></header>
               <div class="import-dialog-body">
-                <label class="field-label" for="ingestion-document">选择文档</label>
-                <select id="ingestion-document" v-model="importDocumentId" class="import-select" :disabled="catalogLoading || importLoading || !!importJob">
+                <label class="field-label" for="upload-document">上传本地文档</label>
+                <input id="upload-document" class="file-input" type="file" accept=".md,.txt,.pdf,text/markdown,text/plain,application/pdf" :disabled="importLoading || !!importJob" @change="chooseUpload" />
+                <div class="upload-meta-row"><label><span>知识库</span><input v-model="uploadKnowledgeBase" maxlength="100" :disabled="importLoading || !!importJob" /></label><small>同一知识库中的同名文件会形成新版本，不会覆盖历史原文。</small></div>
+                <div class="import-divider"><span>或使用预置资料</span></div>
+                <label class="field-label" for="ingestion-document">预置文档</label>
+                <select id="ingestion-document" v-model="importDocumentId" class="import-select" :disabled="catalogLoading || importLoading || !!importJob || !!uploadFile">
                   <option value="" disabled>{{ catalogLoading ? '读取文档清单…' : '请选择一个文档' }}</option>
                   <option v-for="entry in catalogEntries" :key="entry.document_id" :value="entry.document_id">{{ entry.title }} · {{ entry.format.toUpperCase() }}</option>
                 </select>
-                <p v-if="importDocumentId" class="field-hint">编号：{{ importDocumentId }} · 仅使用项目内白名单路径，后端会再次校验哈希和文件格式。</p>
+                <p v-if="uploadFile" class="field-hint">待上传：{{ uploadFile.name }} · {{ Math.ceil(uploadFile.size / 1024) }} KB，后端会校验格式、大小和内容签名。</p>
+                <p v-else-if="importDocumentId" class="field-hint">编号：{{ importDocumentId }} · 后端会再次校验哈希和文件格式。</p>
                 <div v-if="importRequiresParser" class="build-strip pdf-budget-strip"><div><strong>MinerU PDF 解析</strong><span>每次点击只推进一个异步阶段，不会在后台无限轮询。</span></div><label class="budget-field">请求预算<input v-model.number="parserBudget" type="number" min="2" max="8" aria-label="MinerU请求预算" /></label><label class="confirm-check"><input v-model="parserConfirm" type="checkbox" />我确认调用 MinerU</label></div>
                 <div v-if="importError" class="inline-error"><CircleAlert :size="15" />{{ importError }}</div>
                 <div v-if="importJob" class="import-result"><Check v-if="importJob.status === 'succeeded'" :size="16" /><LoaderCircle v-else class="spin" :size="16" /><span>{{ importJob.status === 'succeeded' ? '任务完成，可在列表中查看质量状态。' : `任务状态：${importJob.stage}` }}</span></div>
               </div>
-              <footer class="import-dialog-foot"><button class="quiet-button" type="button" :disabled="importLoading" @click="closeImportDialog">关闭</button><button class="primary-button" type="button" :disabled="!importDocumentId || importLoading || catalogLoading || importJob?.status === 'succeeded'" @click="importJob?.status === 'pending' ? advanceImportJob() : submitImport()"><LoaderCircle v-if="importLoading" class="spin" :size="15" /><Upload v-else :size="15" />{{ importLoading ? '处理中' : importJob?.status === 'pending' ? '继续解析' : '开始入库' }}</button></footer>
+              <footer class="import-dialog-foot"><button class="quiet-button" type="button" :disabled="importLoading" @click="closeImportDialog">关闭</button><button class="primary-button" type="button" :disabled="(!importDocumentId && !uploadFile) || importLoading || catalogLoading || importJob?.status === 'succeeded'" @click="importJob?.status === 'pending' ? advanceImportJob() : submitImport()"><LoaderCircle v-if="importLoading" class="spin" :size="15" /><Upload v-else :size="15" />{{ importLoading ? '处理中' : importJob?.status === 'pending' ? '继续解析' : uploadFile ? '上传并入库' : '开始入库' }}</button></footer>
             </section>
           </div>
         </section>

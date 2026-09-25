@@ -60,6 +60,13 @@ def main() -> None:
             page.get_by_role("button", name="添加资料", exact=True).click()
             page.get_by_role("heading", name="导入研发资料", exact=True).wait_for()
             record("问答页添加资料入口可达", True)
+            page.locator("#upload-document").set_input_files({
+                "name": "browser-upload.md",
+                "mimeType": "text/markdown",
+                "buffer": b"# Browser upload\n\nNo external model call.\n",
+            })
+            page.get_by_text("待上传：browser-upload.md", exact=False).wait_for()
+            record("浏览器文件上传控件可用", True, "Markdown file selected without submitting")
             page.get_by_title("关闭导入窗口").click()
             page.get_by_role("heading", name="知识库", exact=True).wait_for()
             page.get_by_text("PostgreSQL 实时状态", exact=True).wait_for()
