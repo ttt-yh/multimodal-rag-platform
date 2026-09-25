@@ -26,6 +26,6 @@ The parsing-validation plan references `opendatalab/OmniDocBench` at the pinned 
 
 Qwen, Alibaba Cloud Model Studio/Bailian, MinerU, Chroma, PostgreSQL, Vue, FastAPI, LangChain-related terminology, and other product names are used only to identify compatible services or dependencies. They remain trademarks of their respective owners. API access is governed by each provider's terms and is not bundled with this repository.
 
-## Project license status
+## Project license boundary
 
-This notice does not grant a license to the project's own source code. A repository-level `LICENSE` must be selected by the project owner before a final public `v1.0.0` release. Until then, the release should remain a candidate and ordinary copyright rules apply.
+The project's own source code is released under the repository-level MIT License. Evaluation data derived from TiDB documentation is separately governed by the attribution and share-alike boundary documented in `evals/datasets/LICENSE.md`. The MIT License does not relicense third-party documents, images, datasets, trademarks, or service APIs.
