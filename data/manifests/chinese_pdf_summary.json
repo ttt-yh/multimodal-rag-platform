@@ -1,0 +1,28 @@
+{
+  "pdfs": [
+    {
+      "path": "output/pdf/tidb_zh_85_dev.pdf",
+      "pages": 213,
+      "documents": 33,
+      "split": "dev",
+      "sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d"
+    },
+    {
+      "path": "output/pdf/tidb_zh_85_test.pdf",
+      "pages": 109,
+      "documents": 17,
+      "split": "test",
+      "sha256": "867c86c4c7e69595088f7eedc74b29023225e83076adc1c81d79bdd5dcf0240f"
+    }
+  ],
+  "source_documents": 50,
+  "warnings": [
+    {
+      "document_id": "tidb85_e44c6e48f7185585",
+      "image": "/media/tidb-computing-tidb-sql-layer.png",
+      "reason": "image_decode_warning"
+    }
+  ],
+  "pdf_evidence_ranges": 620,
+  "font_sha256": "d79c55e68b1131eea0cc1c47be4f572d964f28c682e143db2ad09c1e4cb07a3f"
+}

@@ -1,0 +1,8 @@
+{
+  "review_pages": 2,
+  "agent_contracts": 40,
+  "lifecycle_contracts": 8,
+  "txt_format_variants": 12,
+  "model_calls": 0,
+  "agent_tests_run": false
+}

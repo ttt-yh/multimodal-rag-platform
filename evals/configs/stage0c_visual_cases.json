@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "purpose": "development_visual_checks_not_final_qa_benchmark",
+  "reference_provenance": "assistant_visual_review_of_fixed_pages_before_model_calls",
+  "human_reviewed": false,
+  "unique_images": 3,
+  "scoring": "逐项人工复核正确要点、数值单位和无证据补写；不使用关键词命中率冒充答案正确率",
+  "cases": [
+    {"case_id":"vision_01","sample_id":"s0c_06","preview_index":0,"question":"只根据图片中的开发及测试环境表格，列出TiKV的CPU、内存和最低实例数量要求。","expected_points":["CPU 8核+","内存32 GB+","最低3个实例"],"answerable":true},
+    {"case_id":"vision_02","sample_id":"s0c_06","preview_index":0,"question":"图片中TiDB在开发测试环境和生产环境的CPU与内存要求分别是多少？不要混用两个表格。","expected_points":["开发测试：8核+，16 GB+","生产：16核+，48 GB+"],"answerable":true},
+    {"case_id":"vision_03","sample_id":"s0c_06","preview_index":0,"question":"根据图片顶部的软件表格，sshpass、numa、tar分别要求什么版本？","expected_points":["sshpass 1.06及以上","numa 2.0.12及以上","tar任意"],"answerable":true},
+    {"case_id":"vision_04","sample_id":"s0c_08","preview_index":0,"question":"图片右侧设置面板中Retention Duration当前显示多少？请保留单位。","expected_points":["3 days，即3天"],"answerable":true},
+    {"case_id":"vision_05","sample_id":"s0c_08","preview_index":0,"question":"根据上方截图的红框标记，启用功能需要依次操作哪些控件？","expected_points":["Open Settings","Enable Feature开关","Save"],"answerable":true},
+    {"case_id":"vision_06","sample_id":"s0c_08","preview_index":0,"question":"图片下方历史结果列表中的状态列展示了哪两种英文状态？","expected_points":["Running","Finished"],"answerable":true},
+    {"case_id":"vision_07","sample_id":"s0c_14","preview_index":0,"question":"读取右下角柱状图，分别列出2019、2020、2021E、2022E的数值和图中单位，保留E标记。","expected_points":["2019：50","2020：129","2021E：174","2022E：220","单位：亿元"],"answerable":true},
+    {"case_id":"vision_08","sample_id":"s0c_14","preview_index":0,"question":"只根据图中柱状图，2025年的中国袋装茶行业线上市场规模是多少？如果没有给出，请明确说明，不能推测。","expected_points":["图中没有2025年数据，无法确定"],"answerable":false}
+  ]
+}

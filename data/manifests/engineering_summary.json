@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "topics": 12,
+  "documents": 24,
+  "qa_cases": 60,
+  "qa_dev": 40,
+  "qa_test": 20,
+  "agent_cases": 40,
+  "no_answer_cases": 12,
+  "api_calls": 0,
+  "human_reviewed": false,
+  "benchmark_claim": false,
+  "limitations": "Templates intentionally simplify facts. No visual reasoning or production-quality claim from these cases."
+}

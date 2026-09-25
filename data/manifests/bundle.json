@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "source_lock_sha256": "f39de4b617237670a5226348b3285a0bc9abbefc44985f44a6c3615760295808",
+  "chinese_source_lock_sha256": "1c2f9550b660fd9f2db6ae44358ee34117ba0283274f92a9eca2c15b7891b6ee",
+  "chinese_ingestion_manifest_sha256": "0593104b879159057bd1c2411a1faf027dd0e1589cbf9e0a6624a7c95999a9f9",
+  "chinese_external_assets_sha256": "30ca915ea743707f231f6a71560c273cc07612ac100fd58f2cdabcef3f2e198f",
+  "derived_manifest_sha256": "7140bda30e11f14366aba7d4f8f03cae3b2a59474767684baec035c8e5cc288e",
+  "public_ingestion_manifest_sha256": "94b0ef26002b3e1de3f89cb39af2cc9aac31beb78cde470ff600fa6c91c525ff",
+  "engineering_ingestion_manifest_sha256": "79286152845aa3b8bd15d9eed1a2873fc5d928352d66f97d13d985c0d0ce3aeb",
+  "parsing_input_manifest_sha256": "a73420a48ce03f4c8873988ecba51ddd82bad9752367fb6699e98dca5a70cea0",
+  "data_environment_lock_sha256": "44cdaae51228bd38d9cfd8421cc521a0cc71741d4f33ab151493e885a7c5578b",
+  "preparation_scripts": {
+    "audit_datasets.py": "e6909f2c3251d21db69d2f27611f0e55ee4e1f3d9c913102e5860e65ff4bad56",
+    "build_chinese_cases.py": "14785feceadc46fae46429772f160a4ef98be518a40b2deda69ea33c3aa76907",
+    "build_chinese_documents.py": "5cd622e88c82e5a3855c818a49ca6b025bec40f44c263c51058c56588b9d47d7",
+    "build_engineering_fixtures.py": "e30d724cd96ebba41c49f4cb07a74deb621b3ffe31ae26c31d12eab65303f94e",
+    "download_chinese.py": "9ad2641c1b6ec5ae093846bbfc6247fb587bc900965b2098e4635e65b51f29e4",
+    "download_chinese_assets.py": "b6160e5e0ed5bdce7127af71d561502aefaca7a67b9c502bc5cf1f2045c5462c",
+    "download_datasets.py": "90d76ec45ada06e4134f69a6d17ccc8775a56f92d9cac2dd95eff0f80d4fe6d6",
+    "export_chinese_gold.py": "d113e448603af8a8e456ce74aeecab61df2f51594090550d4ab50cc98f1a6c22",
+    "package_chinese_review.py": "a9ab72583d82eb5c5393f3d7b9299cbf9eb8f1a3c09d0fa9dc30e4e85a44ed19",
+    "prepare_chinese.py": "e1d8263f3ba84f5487629574191687794540fa342d5834eb74dc8394b56abdeb",
+    "prepare_datasets.py": "49f0622084380850094a8b23e8cbc65f15cba9c50b51b3acc0b5dcb3261e3ba2"
+  },
+  "bundle_id": "data-v2-7140bda30e11"
+}

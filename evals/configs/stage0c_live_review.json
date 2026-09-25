@@ -1,0 +1,22 @@
+{
+  "reviewer": "assistant_visual_review",
+  "human_reviewed": false,
+  "scope": "development_spotcheck_not_independent_benchmark",
+  "criteria": "核心要点符合预先冻结的参考答案；另检查完整回答是否存在错误或无图像证据的补充断言。",
+  "vision": {
+    "vision_01": {"answer_sha256":"4c858d02beda885b9e00f1a5e2c6746a1203e59bfd37e7b77a2bad8e40f0124d","key_points_pass":true,"grounded_pass":true,"note":"TiKV CPU、内存及最低实例数均符合开发测试表。"},
+    "vision_02": {"answer_sha256":"96e83099b0e8bddbda47316dd23e806fc3d6bd4a80671bc312692dfd05629652","key_points_pass":true,"grounded_pass":false,"note":"TiDB两种环境的配置正确；但多列了无关组件，并将1 or more SSDs解释为非单块，与原表允许一块矛盾。"},
+    "vision_03": {"answer_sha256":"a6bf04474b82269502b2c16b657c817b42e2a36840591478ca6d117bb54a8f6f","key_points_pass":true,"grounded_pass":true,"note":"三个软件版本要求均正确。"},
+    "vision_04": {"answer_sha256":"2c16f43e66fb082ac1595d1df1439a132f715d619d8f2db8e09ed1f821b0aba0","key_points_pass":true,"grounded_pass":true,"note":"读出3 days，保留单位。"},
+    "vision_05": {"answer_sha256":"bc3bb825ef95a791a988ad27ba79baab1909a452d10bc55b2f8ceb22119b3354","key_points_pass":true,"grounded_pass":false,"note":"三个控件顺序正确；但关于不保存后刷新页面恢复的断言没有图中证据，仅凭截图不能确认系统行为。"},
+    "vision_06": {"answer_sha256":"18f2578ce65633e67264f50f4ec1b1aa0b01e087f4dd7afc97ebbf1c8f62787e","key_points_pass":true,"grounded_pass":true,"note":"Running、Finished及状态圆点颜色正确。"},
+    "vision_07": {"answer_sha256":"b27e2edff5ac30d9f2c84391c90c0f129cf087617b74837525d7586d16dabaef","key_points_pass":true,"grounded_pass":false,"note":"四个柱值、E标记和亿元单位正确；额外把+31%绑定到2020至2021E，图上不支持该年度对应，且174/129-1约34.9%，不是31%。"},
+    "vision_08": {"answer_sha256":"9fdc66f9cf1c252fec93abe2f706d5f05c059de9fa85d3d53e603bcb1ed242d5","key_points_pass":true,"grounded_pass":true,"note":"明确拒绝推测2025年数据；没有编造缺失年份数值。"}
+  },
+  "parser_findings": [
+    {"sample_id":"s0c_06","finding":"表格抽查的10个配置值均与原页一致；但正文grep命令出现空格和引号粘连，不能把整页视为可执行命令真值。","action":"原始Markdown优先；PDF提取的命令保留原页并进入复核，不自动执行。"},
+    {"sample_id":"s0c_08","finding":"设置页的3 days、控件名与历史状态可提取，但存在4个空正文元素；Settings等控件被误标为header。","action":"保留原页；不能按header标签一律删除，空块不直接入索引，标记需复核。"},
+    {"sample_id":"s0c_14","finding":"解析器提供图表图片与标题，但content为空，没有转写四个柱值；正文出现茶百道误识别为茶白道。","action":"图表按需视觉读取；视觉描述与原文分开保存，不能让模型描述冒充原始证据。"},
+    {"sample_id":"s0c_11","finding":"复杂多栏页有7个空正文元素，当前未完成阅读顺序及全文字符级金标准评测。","action":"保留警告；不报告CER、官方OmniDocBench分数或全量解析准确率。"}
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "phase": "0D",
+  "new_external_api_calls_allowed": false,
+  "project_database_check": "read_only",
+  "demo_document_id": "tidb85_b5ecd98ba8b7dd54",
+  "quality_policy": "parser-quality-v1",
+  "citation_precision_baseline": {"text":"line", "pdf":"page", "image":"image"},
+  "stage1_scope": "development_implementation_not_bulk_publication",
+  "samples_manifest_sha256": "9d1560852963058fc4d5bcc944a1c4705f6ab8966a7abaee2de4621a56c3fd1d",
+  "visual_cases_sha256": "a2eee29397e603c24bb71829aea9006a534e6193469712dd943b62be338c93e9",
+  "known_content_issues": {
+    "s0c_06": ["command_transcription_unverified"],
+    "s0c_08": ["screenshot_text_and_type_review"],
+    "s0c_11": ["complex_layout_reading_order_unverified"],
+    "s0c_14": ["brand_name_transcription_error"]
+  },
+  "not_implemented": ["ingestion_worker", "chunking_pipeline", "chroma_index", "bm25_index", "knowledge_version_activation", "hybrid_retrieval", "rag_answer", "agentic_rag", "product_web_ui"],
+  "stage1_release_constraints": [
+    "来源、页映射或资源缺失阻断发布；空正文等信号需复核，不能当作已确认的遗漏数量。",
+    "candidate仅表示结构筛查未发现问题，不是OCR内容正确或已人工审核。",
+    "原始证据与VLM生成描述分开；未审核描述不能作为原文事实。",
+    "页级引用为首版开发基线；区域定位待单独验证，不能伪造bbox。",
+    "新批解析、视觉和Embedding调用需要另行确认范围与预算，不沿用已用完的0C视觉额度。"
+  ]
+}

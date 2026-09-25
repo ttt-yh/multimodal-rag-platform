@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "multimodal-rag-platform"
+version = "0.1.0"
+description = "Enterprise multimodal RAG platform with governed ingestion, hybrid retrieval and grounded QA"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "uvicorn>=0.34,<1",
+  "markdown-it-py>=3,<5",
+  "httpx2>=2.13,<3",
+  "psycopg[binary]>=3.2,<4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+index = ["chromadb>=0.6,<1", "bm25s>=0.2,<1", "numpy>=1.26,<3"]
+
+[project.scripts]
+mrag = "multimodal_rag.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend/src/multimodal_rag"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+addopts = "-ra"

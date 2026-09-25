@@ -1,0 +1,9 @@
+{
+  "phase": "0A",
+  "mode": "offline",
+  "demo_document_id": "tidb85_b5ecd98ba8b7dd54",
+  "source_split": "dev",
+  "max_document_bytes": 2097152,
+  "external_calls_allowed": false,
+  "model_evaluation": false
+}

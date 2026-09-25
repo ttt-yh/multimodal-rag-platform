@@ -1,0 +1,21 @@
+{
+  "total_candidates": 180,
+  "splits": {
+    "dev": 120,
+    "test": 60
+  },
+  "types": {
+    "concept_procedure": 40,
+    "configuration": 30,
+    "multi_document": 30,
+    "table": 30,
+    "unanswerable_clarify": 20,
+    "visual": 30
+  },
+  "gold_approved": 0,
+  "visual_answers_pending": 0,
+  "no_answer": 11,
+  "needs_clarification": 9,
+  "api_calls": 0,
+  "model_metrics": null
+}

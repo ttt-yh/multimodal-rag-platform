@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source_lock_sha256": "f39de4b617237670a5226348b3285a0bc9abbefc44985f44a6c3615760295808",
+  "derived_manifest_sha256": "74508260cb0823bf55a94252f3fd6d9d0fc2f5ac7b7d6e634a295b38cecc0d67",
+  "public_ingestion_manifest_sha256": "94b0ef26002b3e1de3f89cb39af2cc9aac31beb78cde470ff600fa6c91c525ff",
+  "engineering_ingestion_manifest_sha256": "79286152845aa3b8bd15d9eed1a2873fc5d928352d66f97d13d985c0d0ce3aeb",
+  "parsing_input_manifest_sha256": "a73420a48ce03f4c8873988ecba51ddd82bad9752367fb6699e98dca5a70cea0",
+  "data_environment_lock_sha256": "ca42967227c9b7b79a363b803dddc42ae8035ea86197f5d037a398d250c1da66",
+  "preparation_scripts": {
+    "audit_datasets.py": "d04649393b077b1a0c047043a2a5993053777204dbe1b0b27c6897387deaf341",
+    "build_engineering_fixtures.py": "e30d724cd96ebba41c49f4cb07a74deb621b3ffe31ae26c31d12eab65303f94e",
+    "download_datasets.py": "90d76ec45ada06e4134f69a6d17ccc8775a56f92d9cac2dd95eff0f80d4fe6d6",
+    "prepare_datasets.py": "49f0622084380850094a8b23e8cbc65f15cba9c50b51b3acc0b5dcb3261e3ba2"
+  },
+  "bundle_id": "data-v1-74508260cb08"
+}

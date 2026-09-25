@@ -1,0 +1,57 @@
+from fastapi.testclient import TestClient
+
+from multimodal_rag.api.app import create_app
+
+
+def test_review_queue_and_index_list(monkeypatch, settings):
+    monkeypatch.setattr("multimodal_rag.api.app.list_review_queue",
+                        lambda current_settings, *, state, limit, offset: {
+                            "items": [{"processing_version_id": "proc_demo", "quality_status": "candidate"}],
+                            "filter": state, "pagination": {"limit": limit, "offset": offset, "returned": 1, "total": 1},
+                        })
+    monkeypatch.setattr("multimodal_rag.api.app.list_indexes",
+                        lambda current_settings, *, status, limit: {
+                            "items": [{"index_version_id": "idx_demo", "status": status}],
+                            "filter": status,
+                        })
+    with TestClient(create_app(settings)) as client:
+        queue = client.get("/api/v1/review-queue?limit=10")
+        indexes = client.get("/api/v1/indexes?status=draft")
+    assert queue.status_code == 200
+    assert queue.json()["items"][0]["quality_status"] == "candidate"
+    assert indexes.status_code == 200
+    assert indexes.json()["items"][0]["status"] == "draft"
+
+
+def test_build_index_requires_explicit_live_confirmation(settings):
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/indexes/build", json={
+            "processing_version_ids": ["proc_demo"], "max_requests": 1,
+        })
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "live_confirmation_required"
+
+
+def test_build_index_passes_processing_scope_and_budget(monkeypatch, settings):
+    def fake_build(current_settings, processing_ids, *, max_requests):
+        assert current_settings is settings
+        assert processing_ids == ["proc_demo"]
+        assert max_requests == 2
+        return {"status": "built", "index_version_id": "idx_demo"}
+
+    monkeypatch.setattr("multimodal_rag.application.index_builder.build_real_indexes_for_processing_versions", fake_build)
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/indexes/build", json={
+            "processing_version_ids": ["proc_demo"], "max_requests": 2, "confirm_live": True,
+        })
+    assert response.status_code == 200
+    assert response.json()["index_version_id"] == "idx_demo"
+
+
+def test_activate_index_requires_explicit_confirmation(settings):
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/indexes/idx_demo/activate", json={
+            "reviewer": "human-review", "notes": "已核对产物",
+        })
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "activation_confirmation_required"

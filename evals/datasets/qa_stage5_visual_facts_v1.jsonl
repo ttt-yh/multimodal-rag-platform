@@ -1,0 +1,2 @@
+{"case_id":"zh_visual_24c7329ac125cb41","required_term_groups":[["21.13 K","21.13K"],["query Error"],["Max 为 0","Max: 0","最大值为 0"]],"known_issue":null,"resolved_by_question_revision":"retrieval_stage5_visual_gold_v1","resolved_at":"2026-09-25","review_status":"approved","gold_eligible":true}
+{"case_id":"zh_visual_93b780f4379dc7b9","required_term_groups":[["node1"],["MySQL"],["TiDB"],["Kafka"]],"known_issue":null,"resolved_by_alternative_evidence_group":"retrieval_stage5_visual_gold_v1","resolved_at":"2026-09-25","review_status":"approved","gold_eligible":true}

@@ -1,0 +1,82 @@
+[
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs-cn/tiproxy/tiproxy-balance-label-v2.png",
+    "path": "data/raw/tidb_zh/external_assets/41ab2f7abb9402de.png",
+    "sha256": "4db6859b1f44482f5638f1b77cb3ff739874be019ece1d2ce67ed7c7e79339cf",
+    "bytes": 98047,
+    "width": 1458,
+    "height": 704,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs-cn/tiproxy/tiproxy-traffic-replay.png",
+    "path": "data/raw/tidb_zh/external_assets/b33bf8e01cc202bd.png",
+    "sha256": "12c3639e111690f3ae1c4012d256ac53d1c10d37142ee9f35b7bf54e46e89632",
+    "bytes": 135422,
+    "width": 1698,
+    "height": 922,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/ai-agent-with-memory-powered-by-tidb.png",
+    "path": "data/raw/tidb_zh/external_assets/c98fc0205afa3324.png",
+    "sha256": "d97c8a005904210259bb036d956c8ac36852a6b63a66a182dd8dc80b66ec4b28",
+    "bytes": 320519,
+    "width": 3016,
+    "height": 1508,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/e-commerce-product-search-with-full-text-search.png",
+    "path": "data/raw/tidb_zh/external_assets/061ddf2854d689a1.png",
+    "sha256": "8b49f5cb024a962404a4b9406c630cc1413e50745c59bb3e32793f362099842e",
+    "bytes": 252185,
+    "width": 2406,
+    "height": 1246,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/pet-image-search-via-multimodal-embeddings.png",
+    "path": "data/raw/tidb_zh/external_assets/4aa07cdc28e484e8.png",
+    "sha256": "09bfd17704d7b9686f8ca06dff0fbae777a584608f3b76b380f093556d724cc5",
+    "bytes": 1598033,
+    "width": 1410,
+    "height": 876,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/rag-application-built-with-pytidb.png",
+    "path": "data/raw/tidb_zh/external_assets/18581f4c1ef01d45.png",
+    "sha256": "ce568dbf1520ed278b5ae24a00848bc5da95191dd4555075bb4d5b314aae1dce",
+    "bytes": 487510,
+    "width": 1512,
+    "height": 1100,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/semantic-search-with-vector-embeddings.png",
+    "path": "data/raw/tidb_zh/external_assets/2548052d13764cbd.png",
+    "sha256": "0b0ea3db2f203d0b39868a0c2083d8f4f3d487b4a23868e41a0cef59026ddbaa",
+    "bytes": 232989,
+    "width": 2540,
+    "height": 1284,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  },
+  {
+    "url": "https://docs-download.pingcap.com/media/images/docs/ai/tidb-hybrid-search-demo.png",
+    "path": "data/raw/tidb_zh/external_assets/675bcb837715e3e4.png",
+    "sha256": "4bde6e5335412f9fcd787025ead2ece8b947fdd36185248be1e2c13abe7758a4",
+    "bytes": 241829,
+    "width": 2654,
+    "height": 1376,
+    "source_revision": "external_url_not_git_versioned",
+    "license": "see_parent_document_and_publisher_terms"
+  }
+]

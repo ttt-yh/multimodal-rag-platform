@@ -1,0 +1,563 @@
+{
+  "schema_version": 1,
+  "selection": "fixed_dev_only_before_api",
+  "pages_total": 20,
+  "pdf_files": 18,
+  "samples": [
+    {
+      "sample_id": "s0c_01",
+      "input_path": "output/pdf/stage0c/s0c_01.pdf",
+      "input_sha256": "0df7a1efb4c7d8b58dfce65a8d1ea83d7a5db8a0ca3212617da9b282caeb65e6",
+      "page_count": 2,
+      "category": "zh_native",
+      "pages": [
+        {
+          "category": "zh_native",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 2,
+          "document_id": "tidb85_8f4aee90f17e8aab",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "三节点混合部署最佳实践"
+        },
+        {
+          "category": "zh_native",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 3,
+          "document_id": "tidb85_8f4aee90f17e8aab",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "三节点混合部署最佳实践"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_01-1.png",
+        "evals/results/stage0c/preparation/s0c_01-2.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_02",
+      "input_path": "output/pdf/stage0c/s0c_02.pdf",
+      "input_sha256": "a088b8e70ea658ea376af2321e0db60e267aa315dc2c0c9ebac96071ba191b2c",
+      "page_count": 2,
+      "category": "zh_native",
+      "pages": [
+        {
+          "category": "zh_native",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 4,
+          "document_id": "tidb85_8f4aee90f17e8aab",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "三节点混合部署最佳实践"
+        },
+        {
+          "category": "zh_native",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 5,
+          "document_id": "tidb85_8f4aee90f17e8aab",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "三节点混合部署最佳实践"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_02-1.png",
+        "evals/results/stage0c/preparation/s0c_02-2.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_03",
+      "input_path": "output/pdf/stage0c/s0c_03.pdf",
+      "input_sha256": "5c6b4ab30f629c05e991eb163df943a4888349b313e034a0f54abf9e376feefd",
+      "page_count": 1,
+      "category": "zh_table",
+      "pages": [
+        {
+          "category": "zh_table",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 9,
+          "document_id": "tidb85_2a9f7f3b09262a95",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB 备份与恢复概述"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_03-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_04",
+      "input_path": "output/pdf/stage0c/s0c_04.pdf",
+      "input_sha256": "3d14cdf3365826c379f681da46efe64ac5e6e508f38b6bdf01a650746e538326",
+      "page_count": 1,
+      "category": "zh_table",
+      "pages": [
+        {
+          "category": "zh_table",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 104,
+          "document_id": "tidb85_3390b07bfb484165",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB 产品常见问题解答汇总"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_04-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_05",
+      "input_path": "output/pdf/stage0c/s0c_05.pdf",
+      "input_sha256": "c57c20a478a1e284667e871b4c07b7c5552e596d10568aaddc06fcbf2bca3cb4",
+      "page_count": 1,
+      "category": "zh_table",
+      "pages": [
+        {
+          "category": "zh_table",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 134,
+          "document_id": "tidb85_1dfad7a2926c05be",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB 软件和硬件环境需求"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_05-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_06",
+      "input_path": "output/pdf/stage0c/s0c_06.pdf",
+      "input_sha256": "78ad925f4936a10852040e41a3994f2ece1fa6ecadf5464483195d75d35b2590",
+      "page_count": 1,
+      "category": "zh_table",
+      "pages": [
+        {
+          "category": "zh_table",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 135,
+          "document_id": "tidb85_1dfad7a2926c05be",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB 软件和硬件环境需求"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_06-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_07",
+      "input_path": "output/pdf/stage0c/s0c_07.pdf",
+      "input_sha256": "a4a7021716aa682741d16de303d404104678cc6912da1a7fa9c5ac316c872050",
+      "page_count": 1,
+      "category": "zh_visual",
+      "pages": [
+        {
+          "category": "zh_visual",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 15,
+          "document_id": "tidb85_3f73035358d7bf1f",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB Dashboard 实例性能分析 - 持续分析页面"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_07-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_08",
+      "input_path": "output/pdf/stage0c/s0c_08.pdf",
+      "input_sha256": "117c115e6db8d6a52186e14b7177ff0d3bb27fae89440269f0587bd7f22b6c4b",
+      "page_count": 1,
+      "category": "zh_visual",
+      "pages": [
+        {
+          "category": "zh_visual",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 16,
+          "document_id": "tidb85_3f73035358d7bf1f",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB Dashboard 实例性能分析 - 持续分析页面"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_08-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_09",
+      "input_path": "output/pdf/stage0c/s0c_09.pdf",
+      "input_sha256": "b8fca136f4a582d9d914ac19e9762eb151c3bd8d1cfdcfe9f2e50f79f202e4c4",
+      "page_count": 1,
+      "category": "zh_visual",
+      "pages": [
+        {
+          "category": "zh_visual",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 17,
+          "document_id": "tidb85_3f73035358d7bf1f",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB Dashboard 实例性能分析 - 持续分析页面"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_09-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_10",
+      "input_path": "output/pdf/stage0c/s0c_10.pdf",
+      "input_sha256": "26483f32319f4ae4bd49633cdc8f319bf05a27bc9864436663e659d02aa82870",
+      "page_count": 1,
+      "category": "zh_visual",
+      "pages": [
+        {
+          "category": "zh_visual",
+          "source_path": "output/pdf/tidb_zh_85_dev.pdf",
+          "source_sha256": "7168e171f3a16f4daebe20ebe8af7c123ef0b0c04faf2aadd80416737b269a2d",
+          "source_page": 18,
+          "document_id": "tidb85_3f73035358d7bf1f",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "pdf",
+          "project_rendered": true,
+          "license": "CC-BY-SA-3.0",
+          "title": "TiDB Dashboard 实例性能分析 - 持续分析页面"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_10-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_11",
+      "input_path": "output/pdf/stage0c/s0c_11.pdf",
+      "input_sha256": "1f8492c004d4779734503f9fa6647016264aa5ce2b3c275cdf1b996a3154e394",
+      "page_count": 1,
+      "category": "zh_complex_image",
+      "pages": [
+        {
+          "category": "zh_complex_image",
+          "source_path": "data/raw/omnidocbench/images/newspaper_5a8b7563a3262beecbecd7ddd3ef8827_1.jpg",
+          "source_sha256": "4edd55786eb79d40731d9ed1175947f2fc62e005ae0917be0193f2e6ce1490e4",
+          "source_page": null,
+          "document_id": "omni_008b068a1b8717e8",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "image",
+          "width": 2754,
+          "height": 3939,
+          "project_rendered": false,
+          "license": "upstream OmniDocBench; see data source manifest",
+          "title": "omni_008b068a1b8717e8"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_11-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_12",
+      "input_path": "output/pdf/stage0c/s0c_12.pdf",
+      "input_sha256": "d98b1c5c23bf3c484988cdc3b10dc22ba2c8c1ee287141fb29e6c06348789d5b",
+      "page_count": 1,
+      "category": "zh_complex_image",
+      "pages": [
+        {
+          "category": "zh_complex_image",
+          "source_path": "data/raw/omnidocbench/images/jiaocaineedrop_jiaocai_needrop_en_237.jpg",
+          "source_sha256": "bd393c95aeccf81186f95d8258e8ef4ae64182a321e2481f6d087f05265fa09c",
+          "source_page": null,
+          "document_id": "omni_00c864bd67b9c18f",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "image",
+          "width": 5556,
+          "height": 7853,
+          "project_rendered": false,
+          "license": "upstream OmniDocBench; see data source manifest",
+          "title": "omni_00c864bd67b9c18f"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_12-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_13",
+      "input_path": "output/pdf/stage0c/s0c_13.pdf",
+      "input_sha256": "844c93cbba3894e7d511565161676cd910f693223fc9482ef6c4693bec524ad1",
+      "page_count": 1,
+      "category": "zh_complex_image",
+      "pages": [
+        {
+          "category": "zh_complex_image",
+          "source_path": "data/raw/omnidocbench/images/jiaocaineedrop_jiaocai_needrop_en_2755.jpg",
+          "source_sha256": "63b11a697d37d0b7621e9f98edf32f594d3ff0db1adb513d2e0909f41ae35a8f",
+          "source_page": null,
+          "document_id": "omni_03d35b6e90b7f659",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "image",
+          "width": 2339,
+          "height": 1654,
+          "project_rendered": false,
+          "license": "upstream OmniDocBench; see data source manifest",
+          "title": "omni_03d35b6e90b7f659"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_13-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_14",
+      "input_path": "output/pdf/stage0c/s0c_14.pdf",
+      "input_sha256": "08c5115a9699e157668b68d9648c2c7b8f7ddc40fa07ba31533b39467e85544d",
+      "page_count": 1,
+      "category": "zh_complex_image",
+      "pages": [
+        {
+          "category": "zh_complex_image",
+          "source_path": "data/raw/omnidocbench/images/yanbaor2_07331c0c18a9d47c7318a99860c8ccf95726fefa629d6e446677b30938f2f14f.pdf_18.jpg",
+          "source_sha256": "3a5b616b9ca17975ae8780c16e63c759c59358388ada8b90c79b4e38143dbdd0",
+          "source_page": null,
+          "document_id": "omni_0401b4bdd06a58a7",
+          "split": "dev",
+          "language": "zh",
+          "source_kind": "image",
+          "width": 1654,
+          "height": 2339,
+          "project_rendered": false,
+          "license": "upstream OmniDocBench; see data source manifest",
+          "title": "omni_0401b4bdd06a58a7"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_14-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_15",
+      "input_path": "output/pdf/stage0c/s0c_15.pdf",
+      "input_sha256": "906f462574adc6d04ce73e902e4f2463025060cbd7602b61989678a77254ac2d",
+      "page_count": 1,
+      "category": "en_pdf",
+      "pages": [
+        {
+          "category": "en_pdf",
+          "source_path": "data/raw/vidore/pdfs/Introduction_to_Computer_Science.pdf",
+          "source_sha256": "1003e2a5484f0ef1604fa83cf8176066b156ae686560f72ee48376e341395272",
+          "source_page": 20,
+          "document_id": "Introduction_to_Computer_Science",
+          "split": "dev",
+          "language": "en",
+          "source_kind": "pdf",
+          "project_rendered": false,
+          "license": "Textbook content produced by OpenStax is licensed under a Creative Commons Attribution 4.0 International License (CC BY 4.0).",
+          "title": "Introduction_to_Computer_Science"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_15-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_16",
+      "input_path": "output/pdf/stage0c/s0c_16.pdf",
+      "input_sha256": "cc4f83374e33af8f4031c01af1bce8c8467bcce0f12bdb5903f1d6cdc93f2ad8",
+      "page_count": 1,
+      "category": "en_pdf",
+      "pages": [
+        {
+          "category": "en_pdf",
+          "source_path": "data/raw/vidore/pdfs/Introduction_to_Computer_Science.pdf",
+          "source_sha256": "1003e2a5484f0ef1604fa83cf8176066b156ae686560f72ee48376e341395272",
+          "source_page": 23,
+          "document_id": "Introduction_to_Computer_Science",
+          "split": "dev",
+          "language": "en",
+          "source_kind": "pdf",
+          "project_rendered": false,
+          "license": "Textbook content produced by OpenStax is licensed under a Creative Commons Attribution 4.0 International License (CC BY 4.0).",
+          "title": "Introduction_to_Computer_Science"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_16-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_17",
+      "input_path": "output/pdf/stage0c/s0c_17.pdf",
+      "input_sha256": "3eafee0e73be7df8c57932836f63232e6031ef544a70ec7da42490a9863a5a29",
+      "page_count": 1,
+      "category": "en_pdf",
+      "pages": [
+        {
+          "category": "en_pdf",
+          "source_path": "data/raw/vidore/pdfs/Introduction_to_Computer_Science.pdf",
+          "source_sha256": "1003e2a5484f0ef1604fa83cf8176066b156ae686560f72ee48376e341395272",
+          "source_page": 24,
+          "document_id": "Introduction_to_Computer_Science",
+          "split": "dev",
+          "language": "en",
+          "source_kind": "pdf",
+          "project_rendered": false,
+          "license": "Textbook content produced by OpenStax is licensed under a Creative Commons Attribution 4.0 International License (CC BY 4.0).",
+          "title": "Introduction_to_Computer_Science"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_17-1.png"
+      ]
+    },
+    {
+      "sample_id": "s0c_18",
+      "input_path": "output/pdf/stage0c/s0c_18.pdf",
+      "input_sha256": "3dce4ea352afd06d3c3651a9df78fa35d1fbe929073b064a2ae5ad4983a55298",
+      "page_count": 1,
+      "category": "en_pdf",
+      "pages": [
+        {
+          "category": "en_pdf",
+          "source_path": "data/raw/vidore/pdfs/Introduction_to_Computer_Science.pdf",
+          "source_sha256": "1003e2a5484f0ef1604fa83cf8176066b156ae686560f72ee48376e341395272",
+          "source_page": 31,
+          "document_id": "Introduction_to_Computer_Science",
+          "split": "dev",
+          "language": "en",
+          "source_kind": "pdf",
+          "project_rendered": false,
+          "license": "Textbook content produced by OpenStax is licensed under a Creative Commons Attribution 4.0 International License (CC BY 4.0).",
+          "title": "Introduction_to_Computer_Science"
+        }
+      ],
+      "previews": [
+        "evals/results/stage0c/preparation/s0c_18-1.png"
+      ]
+    }
+  ],
+  "text_samples": [
+    {
+      "document_id": "tidb85_06dc6dd495238ccb",
+      "path": "data/raw/tidb_zh/source/accelerated-table-creation.md",
+      "sha256": "87cb7aa7bb02ebae7e45f068753b8f562038d534d30f311d86454abe95326567",
+      "format": "md",
+      "split": "dev",
+      "title": "提升 TiDB 建表性能",
+      "source_family": "tidb85_06dc6dd495238ccb",
+      "license": "CC-BY-SA-3.0"
+    },
+    {
+      "document_id": "tidb85_d55fdac6accca4d0",
+      "path": "data/raw/tidb_zh/source/agg-distinct-optimization.md",
+      "sha256": "a49c5e7d29d110bd7012a561aa53756bd3d2b6f3653b4d363af6a78fe48c4642",
+      "format": "md",
+      "split": "dev",
+      "title": "Distinct 优化",
+      "source_family": "tidb85_d55fdac6accca4d0",
+      "license": "CC-BY-SA-3.0"
+    },
+    {
+      "document_id": "tidb85_3fe2662a89efa477",
+      "path": "data/raw/tidb_zh/source/ai/guides/auto-embedding-with-pytidb.md",
+      "sha256": "270ed98ac4469cf0366c027e5e5f3532ec5c11179d9498478a36bfe422d6e3dc",
+      "format": "md",
+      "split": "dev",
+      "title": "Auto Embedding 示例",
+      "source_family": "tidb85_3fe2662a89efa477",
+      "license": "CC-BY-SA-3.0"
+    },
+    {
+      "document_id": "tidb85_fb42819c0520ac71",
+      "path": "data/derived/tidb_zh/txt/tidb85_fb42819c0520ac71.txt",
+      "sha256": "ff21617ae88f0b52afd1778fd3165851795e57ce1614a01dc4a40a43ea2e763b",
+      "format": "txt",
+      "split": "dev",
+      "title": "Auto Embedding",
+      "source_family": "tidb85_fb42819c0520ac71",
+      "license": "CC-BY-SA-3.0"
+    },
+    {
+      "document_id": "tidb85_9df6ebbdfce02054",
+      "path": "data/derived/tidb_zh/txt/tidb85_9df6ebbdfce02054.txt",
+      "sha256": "fa30e832c68853aa47baf3ac09c76ad7d9b60fa821ce753043e1a1062c6d34dc",
+      "format": "txt",
+      "split": "dev",
+      "title": "连接 TiDB",
+      "source_family": "tidb85_9df6ebbdfce02054",
+      "license": "CC-BY-SA-3.0"
+    },
+    {
+      "document_id": "tidb85_420833be212a0465",
+      "path": "data/derived/tidb_zh/txt/tidb85_420833be212a0465.txt",
+      "sha256": "a64764d83d8286522945734a1d0b230e9fcda463ca9faba57c6bc4445bfc0324",
+      "format": "txt",
+      "split": "dev",
+      "title": "过滤",
+      "source_family": "tidb85_420833be212a0465",
+      "license": "CC-BY-SA-3.0"
+    }
+  ],
+  "quality_status": "not_run",
+  "notes": [
+    "中文PDF为已有MD重排版，不冒充真实扫描文档。",
+    "复杂版面来自OmniDocBench原始页图，包装PDF不增加OCR文字层。",
+    "TXT为原MD逐字格式副本，不冒充弱结构手写文档。",
+    "参考标注单独保存，上传包只含原文页面。"
+  ]
+}
