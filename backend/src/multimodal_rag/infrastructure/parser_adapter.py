@@ -44,12 +44,26 @@ class ParserAdapter:
         return {"task_id": task_id, "kind": "single", "state": "submitted"}
 
     def request_upload(self, filename: str, data_id: str):
+        return self.request_document_upload(filename, data_id, page_count=2, max_pages=2)
+
+    def request_document_upload(self, filename: str, data_id: str, *, page_count: int,
+                                max_pages: int = 200):
+        """Request one resumable MinerU upload for a validated local PDF.
+
+        The signed URL is deliberately returned only to the current process.  The
+        durable job stores the batch id, never the temporary URL.
+        """
         checked_task_id(data_id)
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}\.pdf", filename):
             raise AppError("invalid_filename", "上传文件名必须是安全的PDF基名", 422)
+        if (not isinstance(page_count, int) or isinstance(page_count, bool)
+                or not 1 <= page_count <= max_pages):
+            raise AppError("pdf_page_limit_exceeded", "PDF 页数超出入库限制", 422)
         data = self.gateway.request("POST", "/file-urls/batch", payload={
-            "files": [{"name": filename, "data_id": data_id, "page_ranges": "1-2"}],
-            "model_version": self.gateway.settings.parser_model, "enable_table": True, "language": "ch"})
+            "files": [{"name": filename, "data_id": data_id,
+                       "page_ranges": f"1-{page_count}"}],
+            "model_version": self.gateway.settings.parser_model, "enable_table": True,
+            "enable_formula": True, "language": "ch"})
         try:
             batch_id = checked_task_id(data["data"]["batch_id"])
             urls = data["data"]["file_urls"]
@@ -63,8 +77,11 @@ class ParserAdapter:
         return {"batch_id": batch_id, "signed_url": urls[0], "data_id": data_id}
 
     def upload(self, signed_url: str, content: bytes):
-        if not content.startswith(b"%PDF-") or len(content) > 2_097_152:
-            raise AppError("invalid_parser_sample", "0B上传验证只接受不超过2MB的PDF", 422)
+        return self.upload_document(signed_url, content, max_bytes=2_097_152)
+
+    def upload_document(self, signed_url: str, content: bytes, *, max_bytes: int = 20_971_520):
+        if not content.startswith(b"%PDF-") or len(content) > max_bytes:
+            raise AppError("invalid_parser_sample", "PDF 签名错误或超过本次上传大小限制", 422)
         self.gateway.request("PUT", "", transfer_url=signed_url, content=content, binary=True)
         return {"uploaded": True, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
 
@@ -103,15 +120,19 @@ class ParserAdapter:
         return result
 
     def fetch_result(self, signed_url: str):
+        content = self.fetch_result_bytes(signed_url)
+        return inspect_result_archive(content, self.gateway.settings.parser_max_unpacked_bytes)
+
+    def fetch_result_bytes(self, signed_url: str) -> bytes:
         content = self.gateway.request("GET", "", transfer_url=signed_url, binary=True,
                                        max_bytes=self.gateway.settings.parser_max_zip_bytes)
         try:
-            result = inspect_result_archive(content, self.gateway.settings.parser_max_unpacked_bytes)
+            inspect_result_archive(content, self.gateway.settings.parser_max_unpacked_bytes)
         except AppError:
             self.gateway.records[-1]["outcome"] = "invalid_parser_archive"
             raise
         self.gateway.records[-1]["outcome"] = "validated_archive"
-        return result
+        return content
 
 
 def inspect_result_archive(content: bytes, max_unpacked: int) -> dict:

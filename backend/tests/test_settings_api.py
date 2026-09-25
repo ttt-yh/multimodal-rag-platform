@@ -48,7 +48,7 @@ def test_alive_is_not_ready(settings, mode):
     with TestClient(create_app(settings)) as client:
         alive = client.get("/health/live")
         assert alive.status_code == 200 and alive.json()["mode"] == mode
-        assert alive.json()["phase"] == "v1-release-candidate"
+        assert alive.json()["phase"] == "v1.1-pdf-ingestion"
         ready = client.get("/health/ready")
         assert ready.status_code == 503 and ready.json()["ready"] is False
         assert ready.json()["external_calls"] == 0

@@ -73,7 +73,7 @@ type QAResult = {
 type CatalogEntry = {
   document_id: string
   title: string
-  format: 'md' | 'txt'
+  format: 'md' | 'txt' | 'pdf'
   source_path: string
   knowledge_base: string
 }
@@ -98,7 +98,7 @@ type ReviewItem = {
   document_id: string
   title: string
   source_path: string
-  format: 'md' | 'txt'
+  format: 'md' | 'txt' | 'pdf'
   version_id: string
   quality_status: 'candidate' | 'needs_review' | 'blocked' | 'approved'
   release_status: 'draft' | 'active' | 'retired'
@@ -143,6 +143,8 @@ const importDocumentId = ref('')
 const importLoading = ref(false)
 const importError = ref('')
 const importJob = ref<IngestionJob | null>(null)
+const parserConfirm = ref(false)
+const parserBudget = ref(4)
 const reviewLoading = ref(false)
 const reviewItems = ref<ReviewItem[]>([])
 const reviewDialogOpen = ref(false)
@@ -157,6 +159,7 @@ const buildConfirm = ref(false)
 const buildLoading = ref(false)
 const buildError = ref('')
 const indexItems = ref<IndexItem[]>([])
+const hasActiveIndex = computed(() => indexItems.value.some((item) => item.status === 'active'))
 const indexLoading = ref(false)
 const activateDialogOpen = ref(false)
 const activateTarget = ref<IndexItem | null>(null)
@@ -242,6 +245,10 @@ const evidenceItems = computed<Evidence[]>(() => displayResult.value.citations.m
   },
 })))
 const visualItems = computed<VisualEvidence[]>(() => displayResult.value.visual_evidence ?? [])
+const selectedImportEntry = computed(() => catalogEntries.value.find(
+  (entry) => entry.document_id === importDocumentId.value,
+))
+const importRequiresParser = computed(() => selectedImportEntry.value?.format === 'pdf')
 
 function navigate(next: Section) {
   section.value = next
@@ -276,6 +283,7 @@ function openImportDialog() {
   importOpen.value = true
   importError.value = ''
   importJob.value = null
+  parserConfirm.value = false
   if (!catalogEntries.value.length) loadCatalog()
 }
 
@@ -293,6 +301,11 @@ async function submitImport() {
   if (!documentId || importLoading.value) return
   importLoading.value = true
   importError.value = ''
+  if (importRequiresParser.value && !parserConfirm.value) {
+    importError.value = 'PDF 入库会调用 MinerU，请先确认本次外部解析请求预算。'
+    importLoading.value = false
+    return
+  }
   try {
     const createResponse = await fetch('/api/v1/ingestion/jobs', {
       method: 'POST',
@@ -308,18 +321,40 @@ async function submitImport() {
       stage: 'queued',
     }
 
-    // 当前是单 worker 开发模式：提交后显式触发一次处理；生产环境可由独立 worker 消费队列。
-    const runResponse = await fetch(`/api/v1/ingestion/jobs/${encodeURIComponent(created.job_id)}/run`, {
-      method: 'POST',
-    })
-    if (!runResponse.ok) throw new Error(`run ${runResponse.status}`)
-    const runResult = await runResponse.json()
-    importJob.value = runResult.job as IngestionJob
+    await advanceImportJob()
     apiStatus.value = 'online'
     await loadKnowledge()
   } catch {
     apiStatus.value = 'offline'
     importError.value = '入库任务未完成，请检查文档编号、后端服务和数据库连接。'
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function advanceImportJob() {
+  if (!importJob.value || importLoading.value && importJob.value.stage !== 'queued') return
+  const isPdf = selectedImportEntry.value?.format === 'pdf'
+  if (isPdf && !parserConfirm.value) {
+    importError.value = '继续 PDF 解析前需要确认 MinerU 调用预算。'
+    return
+  }
+  importLoading.value = true
+  importError.value = ''
+  try {
+    const response = await fetch(`/api/v1/ingestion/jobs/${encodeURIComponent(importJob.value.job_id)}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(isPdf ? { confirm_live: true, max_requests: parserBudget.value } : {}),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data?.error?.message || `run ${response.status}`)
+    importJob.value = data.job as IngestionJob
+    apiStatus.value = 'online'
+    await loadKnowledge()
+    await loadReviewQueue()
+  } catch (error) {
+    importError.value = error instanceof Error ? error.message : '入库任务未完成。'
   } finally {
     importLoading.value = false
   }
@@ -420,7 +455,12 @@ async function buildIndex() {
     const response = await fetch('/api/v1/indexes/build', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ processing_version_ids: selectedProcessingIds.value, max_requests: buildBudget.value, confirm_live: true }),
+      body: JSON.stringify({
+        processing_version_ids: selectedProcessingIds.value,
+        max_requests: buildBudget.value,
+        confirm_live: true,
+        build_mode: hasActiveIndex.value ? 'incremental_from_active' : 'full',
+      }),
     })
     if (!response.ok) throw new Error(`API ${response.status}`)
     selectedProcessingIds.value = []
@@ -698,6 +738,7 @@ checkHealth()
             <div class="ingestion-status-icon"><Check v-if="importJob.status === 'succeeded'" :size="16" /><CircleAlert v-else-if="importJob.status === 'failed'" :size="16" /><LoaderCircle v-else class="spin" :size="16" /></div>
             <div class="ingestion-status-copy"><strong>最近入库任务</strong><span>{{ importJob.document_id }} · {{ importJob.stage }}</span><small v-if="importJob.error_code">错误：{{ importJob.error_code }}</small><small v-else>{{ importJob.status === 'succeeded' ? '解析完成，等待质量审核和索引发布。' : '任务正在处理，页面会保留当前状态。' }}</small></div>
             <span class="status-pill" :class="importJob.status === 'succeeded' ? 'approved' : 'muted'">{{ importJob.status === 'succeeded' ? '已完成' : importJob.status === 'failed' ? '失败' : '处理中' }}</span>
+            <button v-if="importJob.status === 'pending' && importRequiresParser" class="quiet-button" type="button" :disabled="importLoading" @click="advanceImportJob"><RefreshCw :class="{ spin: importLoading }" :size="15" />继续 PDF 解析</button>
           </div>
           <div class="table-panel"><div class="table-toolbar"><div class="table-title"><h2>入库资料</h2><span>{{ knowledgeLoading ? '同步中…' : 'PostgreSQL 实时状态' }}</span></div><div class="table-actions"><select v-model="knowledgeFilter" class="filter-select" aria-label="知识库状态筛选"><option value="all">全部状态</option><option value="active">已激活</option><option value="draft">草稿 / 退役</option><option value="review">待审核</option></select><button class="quiet-button" type="button" @click="loadKnowledge"><Search :size="15" />刷新</button></div></div><table><thead><tr><th>文档</th><th>格式</th><th>Chunk</th><th>处理质量</th><th>索引状态</th></tr></thead><tbody><tr v-for="document in knowledgeDocuments" :key="document.document_id"><td><div class="doc-cell"><span class="file-icon"><FileText :size="16" /></span><div><strong>{{ document.title }}</strong><small>{{ document.source_path }}</small></div></div></td><td>{{ document.format.toUpperCase() }}</td><td>{{ document.chunk_count || '—' }}</td><td><span :class="['status-pill', document.processing.quality_status === 'approved' ? 'approved' : 'muted']">{{ document.processing.quality_status || '未处理' }}</span></td><td><span :class="['table-status', { 'muted-status': document.index.status !== 'active' }]" ><span class="status-dot" />{{ document.index.status || '未建索引' }}</span></td></tr><tr v-if="!knowledgeDocuments.length"><td colspan="5" class="empty-cell">当前筛选没有资料</td></tr></tbody></table></div>
 
@@ -714,7 +755,7 @@ checkHealth()
                 <button class="table-action" type="button" @click="openReview(item)">{{ item.quality_status === 'approved' ? '查看审核' : '审核' }}</button>
               </article>
             </div>
-            <div class="build-strip"><div><strong>构建草稿索引</strong><span>仅对已审核版本执行；Embedding调用按批次计费。</span></div><label class="budget-field">预算<input v-model.number="buildBudget" type="number" min="1" max="128" aria-label="Embedding调用预算" /></label><label class="confirm-check"><input v-model="buildConfirm" type="checkbox" />我确认调用模型</label><button class="primary-button" type="button" :disabled="!selectedProcessingIds.length || !buildConfirm || buildLoading" @click="buildIndex"><LoaderCircle v-if="buildLoading" class="spin" :size="15" /><Database v-else :size="15" />{{ buildLoading ? '构建中' : `构建 ${selectedProcessingIds.length} 个版本` }}</button></div>
+            <div class="build-strip"><div><strong>{{ hasActiveIndex ? '增量扩展草稿索引' : '构建首个草稿索引' }}</strong><span>{{ hasActiveIndex ? '复用活动索引已有向量，仅对所选新版本调用 Embedding。' : '仅对已审核版本执行；Embedding 调用按批次计费。' }}</span></div><label class="budget-field">预算<input v-model.number="buildBudget" type="number" min="1" max="128" aria-label="Embedding调用预算" /></label><label class="confirm-check"><input v-model="buildConfirm" type="checkbox" />我确认调用模型</label><button class="primary-button" type="button" :disabled="!selectedProcessingIds.length || !buildConfirm || buildLoading" @click="buildIndex"><LoaderCircle v-if="buildLoading" class="spin" :size="15" /><Database v-else :size="15" />{{ buildLoading ? '构建中' : `构建 ${selectedProcessingIds.length} 个版本` }}</button></div>
             <div v-if="buildError" class="inline-error"><CircleAlert :size="15" />{{ buildError }}</div>
           </section>
 
@@ -736,18 +777,19 @@ checkHealth()
 
           <div v-if="importOpen" class="import-overlay" @click.self="closeImportDialog">
             <section class="import-dialog" role="dialog" aria-modal="true" aria-label="导入研发资料">
-              <header class="import-dialog-head"><div><span class="section-kicker">入库任务</span><h2>导入研发资料</h2><p>从项目白名单中选择 Markdown 或 TXT 文档，创建一个可追踪的入库任务。</p></div><button class="icon-button" type="button" title="关闭导入窗口" @click="closeImportDialog"><X :size="17" /></button></header>
+              <header class="import-dialog-head"><div><span class="section-kicker">入库任务</span><h2>导入研发资料</h2><p>从项目白名单中选择 Markdown、TXT 或 PDF，创建可追踪的版本化入库任务。</p></div><button class="icon-button" type="button" title="关闭导入窗口" @click="closeImportDialog"><X :size="17" /></button></header>
               <div class="import-dialog-body">
                 <label class="field-label" for="ingestion-document">选择文档</label>
-                <select id="ingestion-document" v-model="importDocumentId" class="import-select" :disabled="catalogLoading || importLoading">
+                <select id="ingestion-document" v-model="importDocumentId" class="import-select" :disabled="catalogLoading || importLoading || !!importJob">
                   <option value="" disabled>{{ catalogLoading ? '读取文档清单…' : '请选择一个文档' }}</option>
                   <option v-for="entry in catalogEntries" :key="entry.document_id" :value="entry.document_id">{{ entry.title }} · {{ entry.format.toUpperCase() }}</option>
                 </select>
                 <p v-if="importDocumentId" class="field-hint">编号：{{ importDocumentId }} · 仅使用项目内白名单路径，后端会再次校验哈希和文件格式。</p>
+                <div v-if="importRequiresParser" class="build-strip pdf-budget-strip"><div><strong>MinerU PDF 解析</strong><span>每次点击只推进一个异步阶段，不会在后台无限轮询。</span></div><label class="budget-field">请求预算<input v-model.number="parserBudget" type="number" min="2" max="8" aria-label="MinerU请求预算" /></label><label class="confirm-check"><input v-model="parserConfirm" type="checkbox" />我确认调用 MinerU</label></div>
                 <div v-if="importError" class="inline-error"><CircleAlert :size="15" />{{ importError }}</div>
                 <div v-if="importJob" class="import-result"><Check v-if="importJob.status === 'succeeded'" :size="16" /><LoaderCircle v-else class="spin" :size="16" /><span>{{ importJob.status === 'succeeded' ? '任务完成，可在列表中查看质量状态。' : `任务状态：${importJob.stage}` }}</span></div>
               </div>
-              <footer class="import-dialog-foot"><button class="quiet-button" type="button" :disabled="importLoading" @click="closeImportDialog">关闭</button><button class="primary-button" type="button" :disabled="!importDocumentId || importLoading || catalogLoading" @click="submitImport"><LoaderCircle v-if="importLoading" class="spin" :size="15" /><Upload v-else :size="15" />{{ importLoading ? '处理中' : '开始入库' }}</button></footer>
+              <footer class="import-dialog-foot"><button class="quiet-button" type="button" :disabled="importLoading" @click="closeImportDialog">关闭</button><button class="primary-button" type="button" :disabled="!importDocumentId || importLoading || catalogLoading || importJob?.status === 'succeeded'" @click="importJob?.status === 'pending' ? advanceImportJob() : submitImport()"><LoaderCircle v-if="importLoading" class="spin" :size="15" /><Upload v-else :size="15" />{{ importLoading ? '处理中' : importJob?.status === 'pending' ? '继续解析' : '开始入库' }}</button></footer>
             </section>
           </div>
         </section>

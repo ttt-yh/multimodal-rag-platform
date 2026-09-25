@@ -48,6 +48,27 @@ def test_build_index_passes_processing_scope_and_budget(monkeypatch, settings):
     assert response.json()["index_version_id"] == "idx_demo"
 
 
+def test_incremental_build_uses_active_index_reuse(monkeypatch, settings):
+    def fake_incremental(current_settings, processing_ids, *, max_requests):
+        assert current_settings is settings
+        assert processing_ids == ["proc_pdf"]
+        assert max_requests == 1
+        return {"status": "built", "build_mode": "incremental_reuse",
+                "index_version_id": "idx_incremental"}
+
+    monkeypatch.setattr(
+        "multimodal_rag.application.index_builder.build_incremental_index_from_active",
+        fake_incremental,
+    )
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/indexes/build", json={
+            "processing_version_ids": ["proc_pdf"], "max_requests": 1,
+            "confirm_live": True, "build_mode": "incremental_from_active",
+        })
+    assert response.status_code == 200
+    assert response.json()["build_mode"] == "incremental_reuse"
+
+
 def test_activate_index_requires_explicit_confirmation(settings):
     with TestClient(create_app(settings)) as client:
         response = client.post("/api/v1/indexes/idx_demo/activate", json={

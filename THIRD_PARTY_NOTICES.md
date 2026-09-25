@@ -14,6 +14,8 @@ The Chinese retrieval and visual evaluation cases were prepared from the public 
 
 Per-file source URLs, revisions, hashes, and license fields are retained in `data/manifests/`. Evaluation annotations derived from these documents should be used and redistributed consistently with the upstream attribution and share-alike requirements.
 
+The repository includes one small project-rendered PDF fixture at `data/raw/pdf_samples/three-node-deployment-sample.pdf` for exercising the versioned PDF/MinerU ingestion path. It is rendered from the pinned TiDB Chinese documentation source identified in `data/manifests/ingestion_chinese_md.jsonl` and remains subject to `CC-BY-SA-3.0`; it is not relicensed by the project's MIT License.
+
 ## ViDoRe computer-science dataset
 
 The data preparation plan references `vidore/vidore_v3_computer_science` at revision `d5cc75883d92e294f0c0fc2662551c9708a06ebc`. Its dataset card records `CC-BY-4.0`. The downloaded PDFs and parquet files are not committed to this repository; only reproducibility metadata and preparation scripts are retained.

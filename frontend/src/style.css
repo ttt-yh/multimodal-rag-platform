@@ -129,3 +129,5 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid rgba(31, 155, 
 .visual-evidence-card strong { color: var(--ink); font-size: 11px; }
 .visual-evidence-card span, .visual-evidence-card small { overflow-wrap: anywhere; color: var(--ink-soft); font-family: 'DM Mono', monospace; font-size: 9px; }
 @media (max-width: 680px) { .visual-evidence-grid { grid-template-columns: 1fr; }.visual-evidence-card img { height: 180px; } }
+.pdf-budget-strip { margin-top: 14px; padding: 11px 12px; border: 1px solid #dbe8e3; border-radius: 5px; flex-wrap: wrap; }
+.pdf-budget-strip > div { flex-basis: 100%; }

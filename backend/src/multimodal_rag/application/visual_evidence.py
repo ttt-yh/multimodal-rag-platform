@@ -18,6 +18,15 @@ _GENERIC_VISUAL_TERMS = {"原始", "截图", "示意", "图中", "依据", "中�
                          "什么", "页面", "显示", "哪个", "哪些", "是否", "如何", "图片"}
 
 
+def _allowed_asset_roots(settings: Settings) -> tuple[Path, Path]:
+    return ((settings.project_root / "data" / "raw").resolve(),
+            (settings.project_root / "data" / "derived" / "mineru_assets").resolve())
+
+
+def _inside_allowed_asset_root(settings: Settings, path: Path) -> bool:
+    return any(path.is_relative_to(root) for root in _allowed_asset_roots(settings))
+
+
 def _corpus_root(source_file: Path) -> Path | None:
     for parent in (source_file.parent, *source_file.parents):
         if parent.name.lower() == "source":
@@ -33,15 +42,19 @@ def _resolve(settings: Settings, source_path: str, image_ref: str) -> tuple[Path
     if any(part == ".." for part in pure.parts):
         return None, "unsafe_reference"
     source_file = (settings.project_root / source_path).resolve()
-    if image_ref.startswith("/"):
+    # MinerU assets are materialized under one dedicated derived-data root and
+    # stored as project-relative references.  Ordinary Markdown references keep
+    # their original source-relative semantics.
+    if image_ref.startswith("data/derived/mineru_assets/"):
+        candidate = (settings.project_root / image_ref).resolve()
+    elif image_ref.startswith("/"):
         root = _corpus_root(source_file)
         if root is None:
             return None, "corpus_root_unknown"
         candidate = (root / image_ref.lstrip("/")).resolve()
     else:
         candidate = (source_file.parent / image_ref).resolve()
-    allowed = (settings.project_root / "data" / "raw").resolve()
-    if not candidate.is_relative_to(allowed):
+    if not _inside_allowed_asset_root(settings, candidate):
         return None, "unsafe_reference"
     return candidate, "resolved"
 
@@ -59,6 +72,8 @@ def _resolve_rows(settings: Settings, rows: list[dict]) -> list[dict]:
         path, status = _resolve(settings, row["document_source_path"], row["image_ref"])
         item = {key: row[key] for key in (
             "chunk_id", "element_id", "document_id", "document_title", "heading_path", "image_ref")}
+        item["ordinal"] = row.get("ordinal")
+        item["visual_context"] = row.get("visual_context") or ""
         item["source"] = row.get("source")
         item["raw_text"] = row.get("raw_text") or ""
         item["chunk_text"] = row.get("chunk_text") or ""
@@ -105,7 +120,9 @@ def _query_relevance(query: str, title: str, item: dict) -> float:
     query_tokens = _tokens(scoped_query)
     raw = f"{item.get('raw_text', '')} {item.get('image_ref', '')} {' '.join(item.get('heading_path') or [])}"
     context = item.get("chunk_text", "")
+    visual_context = item.get("visual_context", "")
     raw_tokens, context_tokens = _tokens(raw), _tokens(context)
+    visual_context_tokens = _tokens(visual_context)
     direct = query_tokens & raw_tokens
     contextual = query_tokens & context_tokens
     # Alt text and file names are stronger image-level signals than surrounding
@@ -114,13 +131,15 @@ def _query_relevance(query: str, title: str, item: dict) -> float:
                        for token in direct)
     context_score = sum(1.0 if re.fullmatch(r"[a-z0-9_.-]+", token) else 0.35
                         for token in contextual)
+    local_score = sum(2.5 if re.fullmatch(r"[a-z0-9_.-]+", token) else 1.25
+                      for token in query_tokens & visual_context_tokens)
     quoted = [next(part for part in groups if part) for groups in
               re.findall(r"“([^”]+)”|'([^']+)'|\"([^\"]+)\"", scoped_query)]
     raw_normalised = unicodedata.normalize("NFKC", raw).lower()
     exact_label_score = 12.0 * sum(
         unicodedata.normalize("NFKC", phrase).lower() in raw_normalised
         for phrase in quoted if len(phrase.strip()) >= 2)
-    return round(direct_score + context_score + exact_label_score, 4)
+    return round(direct_score + local_score + context_score + exact_label_score, 4)
 
 
 def locate_visual_evidence_for_title(settings: Settings, title: str, query: str,
@@ -134,7 +153,7 @@ def locate_visual_evidence_for_title(settings: Settings, title: str, query: str,
         item["visual_relevance_score"] = _query_relevance(query, title, item)
     ready.sort(key=lambda item: (-item["visual_relevance_score"],
                                  item.get("source", {}).get("line_start") or 0,
-                                 item["element_id"]))
+                                 item.get("ordinal") or 0, item["element_id"]))
     # When one image has a strong, clearly separated image-level match, avoid
     # sending lower-ranked sibling screenshots as distractors.  Otherwise keep
     # up to three candidates for the VLM to compare.
@@ -191,8 +210,7 @@ def read_visual_candidate(settings: Settings, candidate: dict) -> tuple[bytes, s
     if not isinstance(relative, str) or mime not in _MIME_BY_SUFFIX.values():
         raise AppError("invalid_visual_candidate", "图片候选缺少有效的本地资源信息", 422)
     path = (settings.project_root / relative).resolve()
-    allowed = (settings.project_root / "data" / "raw").resolve()
-    if not path.is_relative_to(allowed) or not path.is_file():
+    if not _inside_allowed_asset_root(settings, path) or not path.is_file():
         raise AppError("visual_asset_unavailable", "图片资源不存在或超出允许目录", 409)
     content = path.read_bytes()
     if len(content) > settings.api_max_image_bytes:

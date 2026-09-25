@@ -10,6 +10,11 @@
 __pycache__/
 .pytest_cache/
 data/raw/
+!data/raw/
+data/raw/*
+!data/raw/pdf_samples/
+data/raw/pdf_samples/*
+!data/raw/pdf_samples/three-node-deployment-sample.pdf
 data/derived/
 data/annotations/
 data/splits/

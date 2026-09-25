@@ -221,6 +221,28 @@ def test_parser_signed_upload_no_bearer(gateway_factory):
     assert "SECRET" not in json.dumps(gw.records)
 
 
+def test_parser_document_upload_uses_declared_page_range(gateway_factory):
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["files"][0]["page_ranges"] == "1-12"
+        assert body["enable_formula"] is True
+        return httpx.Response(200, json={"code": 0, "data": {
+            "batch_id": "batch-prod", "file_urls": [
+                "https://mineru.oss-cn-shanghai.aliyuncs.com/prod.pdf?signature=SECRET"]}})
+    adapter = ParserAdapter(gateway_factory("parser", handler))
+    ticket = adapter.request_document_upload("manual.pdf", "job-prod", page_count=12)
+    assert ticket["batch_id"] == "batch-prod"
+
+
+def test_parser_document_upload_rejects_page_limit_without_request(gateway_factory):
+    gateway = gateway_factory("parser", reply({}))
+    with pytest.raises(AppError) as exc:
+        ParserAdapter(gateway).request_document_upload(
+            "manual.pdf", "job-prod", page_count=201, max_pages=200)
+    assert exc.value.code == "pdf_page_limit_exceeded"
+    assert gateway.budget.used == 0
+
+
 @pytest.mark.parametrize("url", ["https://127.0.0.1/a", "http://cdn-mineru.openxlab.org.cn/a",
     "https://cdn-mineru.openxlab.org.cn.evil.invalid/a", "https://u:p@cdn-mineru.openxlab.org.cn/a"])
 def test_transfer_allowlist(gateway_factory, url):

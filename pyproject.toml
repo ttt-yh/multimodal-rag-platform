@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "multimodal-rag-platform"
-version = "1.0.0"
+version = "1.1.0"
 description = "Enterprise multimodal RAG platform with governed ingestion, hybrid retrieval and grounded QA"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
   "markdown-it-py>=3,<5",
   "httpx2>=2.13,<3",
   "psycopg[binary]>=3.2,<4",
+  "pypdf>=6,<7",
 ]
 
 [project.optional-dependencies]

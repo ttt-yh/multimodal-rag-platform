@@ -103,3 +103,33 @@ def test_title_locator_prioritises_explicit_quoted_image_label(monkeypatch, tmp_
         Settings(_env_file=None, project_root=tmp_path, api_max_image_bytes=100),
         "示例", "依据《示例》中标注为“执行时间”的原始截图回答问题", max_images=2)
     assert [item["element_id"] for item in result["candidates"]] == ["el_time"]
+
+
+def test_title_locator_uses_nearest_preceding_context_for_pdf_charts(monkeypatch, tmp_path: Path):
+    for name in ("default.jpg", "modified.jpg", "grpc.jpg"):
+        image = tmp_path / "data/derived/mineru_assets/proc_pdf/images" / name
+        image.parent.mkdir(parents=True, exist_ok=True)
+        image.write_bytes(b"\xff\xd8\xff" + name.encode())
+    base = {
+        **_row("data/derived/mineru_assets/proc_pdf/images/default.jpg"),
+        "raw_text": "QPS query OK Max 21.13 K query Error Max 0",
+        "chunk_text": "默认配置和调整后配置的 QPS 对比",
+        "visual_context": "下图是默认参数配置下的 QPS 监控",
+        "ordinal": 10,
+    }
+    rows = [
+        base,
+        {**base, "element_id": "el_modified", "ordinal": 12,
+         "image_ref": "data/derived/mineru_assets/proc_pdf/images/modified.jpg",
+         "raw_text": "QPS query OK Max 20.37 K query Error Max 0",
+         "visual_context": "调整参数后，稳定性得到了改善"},
+        {**base, "element_id": "el_grpc", "ordinal": 29,
+         "image_ref": "data/derived/mineru_assets/proc_pdf/images/grpc.jpg",
+         "raw_text": "gRPC Pool CPU", "visual_context": "gRPC 线程池利用率"},
+    ]
+    monkeypatch.setattr(visual_evidence, "load_active_image_elements_for_title",
+                        lambda *args, **kwargs: rows)
+    result = visual_evidence.locate_visual_evidence_for_title(
+        Settings(_env_file=None, project_root=tmp_path, api_max_image_bytes=100),
+        "示例", "《示例》默认配置的 QPS 图中最大值是多少？", max_images=1)
+    assert result["candidates"][0]["element_id"] == "el_a"

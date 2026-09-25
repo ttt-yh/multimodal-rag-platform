@@ -79,6 +79,28 @@ def finish_job(settings: Settings, job_id: str, worker_id: str, *, stage: str = 
         raise AppError("job_lease_lost", "任务不存在、已被其他worker接管或不在运行状态", 409)
 
 
+def defer_job(settings: Settings, job_id: str, worker_id: str, *, stage: str,
+              external_batch_id: str | None = None) -> None:
+    """Return an asynchronous parser job to the durable queue.
+
+    The batch id is safe to persist; signed upload/download URLs are not.
+    """
+    if not stage or len(stage) > 128:
+        raise AppError("invalid_job_stage", "任务阶段不合法", 422)
+    if external_batch_id is not None and (not external_batch_id or len(external_batch_id) > 128):
+        raise AppError("invalid_task_id", "外部解析任务编号不合法", 422)
+    with connection(settings) as conn:
+        changed = conn.execute(
+            """UPDATE mrag.ingestion_jobs
+               SET status='pending', stage=%s, external_batch_id=COALESCE(%s,external_batch_id),
+                   lease_owner=NULL, lease_expires_at=NULL, heartbeat_at=now(), updated_at=now()
+               WHERE job_id=%s AND status='running' AND lease_owner=%s""",
+            (stage, external_batch_id, job_id, worker_id),
+        ).rowcount
+    if changed != 1:
+        raise AppError("job_lease_lost", "任务不存在、已被其他worker接管或不在运行状态", 409)
+
+
 def fail_job(settings: Settings, job_id: str, worker_id: str, error_code: str, *, stage: str = "failed") -> None:
     if not error_code or len(error_code) > 128:
         raise AppError("invalid_error_code", "错误编号不能为空且长度不能超过128", 422)

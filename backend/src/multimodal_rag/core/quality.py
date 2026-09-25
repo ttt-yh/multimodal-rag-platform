@@ -1,7 +1,7 @@
-"""阶段0冻结的解析质量判定规则；纯函数，不联网、不写库、不激活版本。
+"""版本化入库使用的解析质量判定规则；纯函数，不联网、不写库、不激活版本。
 
-这是阶段1要接入worker的规则基线，不代表现在已有入库质量门禁。
-candidate只表示未发现已知结构问题，绝不等价于OCR内容全部正确。
+该规则已接入文本与 PDF 入库 worker。candidate 只表示未发现已知结构问题，
+绝不等价于 OCR 内容全部正确，也不会绕过后续人工审核与发布门禁。
 """
 from pydantic import ValidationError
 
@@ -63,4 +63,4 @@ def assess_parser_result(result: dict, known_issues: tuple[str, ...] = ()) -> di
             'blocking_reasons': sorted(blocked), 'review_reasons': sorted(review),
             'index_candidate_elements': eligible, 'auto_activate': False,
             'meaning': 'structure_screening_only_not_content_accuracy',
-            'worker_integration': 'not_implemented'}
+            'worker_integration': 'versioned_ingestion_worker'}

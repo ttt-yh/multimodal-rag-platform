@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     port: int = Field(default=8010, ge=1024, le=65535)
     log_level: Literal["INFO", "WARNING", "ERROR"] = "INFO"
     max_document_bytes: int = Field(default=2_097_152, ge=1, le=10_485_760)
+    max_pdf_bytes: int = Field(default=20_971_520, ge=1_048_576, le=52_428_800)
+    max_pdf_pages: int = Field(default=200, ge=1, le=500)
     # 入库白名单相对项目根目录配置；默认值保持现有 0A/阶段1行为。
     ingestion_manifest: str = "data/manifests/ingestion_chinese_md.jsonl"
     postgres_dsn: SecretStr = SecretStr("")

@@ -1,5 +1,6 @@
 """FastAPI 应用工厂：测试可注入配置，不在 import 时连接数据库或供应商。"""
 import time
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request
@@ -18,6 +19,7 @@ from multimodal_rag.application.visual_evidence import locate_visual_evidence, r
 from multimodal_rag.core.errors import AppError
 from multimodal_rag.core.models import Identifier, IngestionJobStatus, PreviewResult, QualityReviewResult
 from multimodal_rag.infrastructure.logging import configure_logging, log_event
+from multimodal_rag.infrastructure.http_gateway import CallBudget, HttpGateway
 from multimodal_rag.infrastructure.settings import Settings, load_settings
 from multimodal_rag.infrastructure.review_repository import get_job, record_quality_review
 from multimodal_rag.infrastructure.documents import WhitelistDocumentReader
@@ -71,11 +73,18 @@ class IngestionCreateRequest(BaseModel):
     document_id: Identifier
 
 
+class IngestionRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    confirm_live: bool = False
+    max_requests: int = Field(default=4, ge=1, le=8)
+
+
 class IndexBuildRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     processing_version_ids: list[Identifier] = Field(min_length=1, max_length=100)
     max_requests: int = Field(ge=1, le=128)
     confirm_live: bool = False
+    build_mode: Literal["full", "incremental_from_active"] = "full"
 
 
 class IndexActivateRequest(BaseModel):
@@ -93,7 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/", tags=["health"])
     def root():
-        return {"service": "multimodal-rag", "phase": "v1-release-candidate", "docs": "/docs",
+        return {"service": "multimodal-rag", "phase": "v1.1-pdf-ingestion", "docs": "/docs",
                 "frontend": "http://127.0.0.1:5173"}
 
     @app.middleware("http")
@@ -131,7 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health/live", tags=["health"])
     def live():
         return {"status": "alive", "mode": settings.mode,
-                "phase": "v1-release-candidate", "version": __version__}
+                "phase": "v1.1-pdf-ingestion", "version": __version__}
 
     @app.get("/health/ready", tags=["health"], responses={503: {"description": "外部依赖尚未接入"}})
     def ready():
@@ -153,7 +162,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def ingestion_catalog(limit: int = Query(default=50, ge=1, le=200),
                           offset: int = Query(default=0, ge=0)):
         entries = WhitelistDocumentReader(
-            settings.project_root, settings.max_document_bytes, settings.ingestion_manifest
+            settings.project_root, settings.max_document_bytes, settings.ingestion_manifest,
+            settings.max_pdf_bytes,
         ).list_allowed()
         selected = entries[offset:offset + limit]
         return {
@@ -171,16 +181,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return enqueue_document(settings, body.document_id)
 
     @app.post("/api/v1/ingestion/jobs/{job_id}/run", tags=["ingestion"])
-    def run_ingestion_job(job_id: str):
+    def run_ingestion_job(job_id: str, body: IngestionRunRequest | None = None):
+        body = body or IngestionRunRequest()
         worker_id = "api-" + uuid4().hex
-        result = run_once(settings, worker_id, job_id=job_id)
+        current = get_job(settings, job_id)
+        entry = None
+        if current.get("document_id"):
+            entry, _ = WhitelistDocumentReader(
+                settings.project_root, settings.max_document_bytes, settings.ingestion_manifest,
+                settings.max_pdf_bytes,
+            ).read_source(current["document_id"])
+        gateway = None
+        if entry is not None and entry.format == "pdf":
+            if not body.confirm_live:
+                raise AppError("live_confirmation_required",
+                               "PDF 入库会调用 MinerU，请明确确认并设置本次请求预算", 422)
+            gateway = HttpGateway(settings, "parser", budget=CallBudget(body.max_requests))
+        try:
+            if gateway is None:
+                result = run_once(settings, worker_id, job_id=job_id)
+            else:
+                result = run_once(settings, worker_id, job_id=job_id, parser_gateway=gateway)
+        finally:
+            if gateway is not None:
+                gateway.close()
         if result is None:
             current = get_job(settings, job_id)
             if current["status"] not in {"running", "succeeded"}:
                 raise AppError("job_not_available", "入库任务当前不可执行", 409)
             # 幂等重试或其他worker已领取时，返回数据库中的当前状态。
             return {"result": None, "job": current}
-        return {"result": result, "job": get_job(settings, job_id)}
+        response = {"result": result, "job": get_job(settings, job_id)}
+        if gateway is not None:
+            response["external_calls"] = gateway.budget.used
+            response["call_records"] = gateway.records
+        return response
 
     @app.post("/api/v1/processing/{processing_version_id}/review",
               response_model=QualityReviewResult, tags=["ingestion"])
@@ -202,7 +237,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def build_index(body: IndexBuildRequest):
         if not body.confirm_live:
             raise AppError("live_confirmation_required", "构建索引会调用Embedding，请明确确认并提供预算", 422)
-        from multimodal_rag.application.index_builder import build_real_indexes_for_processing_versions
+        from multimodal_rag.application.index_builder import (
+            build_incremental_index_from_active,
+            build_real_indexes_for_processing_versions,
+        )
+        if body.build_mode == "incremental_from_active":
+            return build_incremental_index_from_active(
+                settings, body.processing_version_ids, max_requests=body.max_requests
+            )
         return build_real_indexes_for_processing_versions(
             settings, body.processing_version_ids, max_requests=body.max_requests
         )

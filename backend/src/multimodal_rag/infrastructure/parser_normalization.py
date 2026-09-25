@@ -6,7 +6,7 @@
 import hashlib
 from io import BytesIO
 import json
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 
 from multimodal_rag.core.errors import AppError
@@ -31,7 +31,7 @@ def normalize_archive(content: bytes, sample: dict, max_unpacked=67_108_864) -> 
     pages = sample["pages"]
     if len(pages) != sample["page_count"] or any(p["split"] != "dev" for p in pages):
         raise AppError("invalid_sample_mapping", "验证样例页映射不完整或包含非开发数据", 422)
-    elements, warnings, seen = [], [], set()
+    elements, warnings, seen, heading_stack = [], [], set(), []
     with ZipFile(BytesIO(content)) as archive:
         structured = next(n for n in archive.namelist() if n.endswith("content_list.json"))
         base = PurePosixPath(structured).parent
@@ -86,9 +86,15 @@ def normalize_archive(content: bytes, sample: dict, max_unpacked=67_108_864) -> 
                 location = SourceLocation(source_path=origin["source_path"],kind="image",precision="image",
                     image_ref=origin["source_path"],image_width=origin["width"],image_height=origin["height"])
             identity = f'{NORMALIZER_VERSION}:{artifact["archive_sha256"]}:{sample["sample_id"]}:{index}'
+            version_id = origin.get('version_id') or 'ver_'+origin['source_sha256'][:24]
+            if kind == "heading" and text.strip():
+                provider_level = row.get("text_level")
+                level = provider_level if type(provider_level) is int and provider_level > 0 else 1
+                level = min(level, len(heading_stack) + 1)
+                heading_stack = heading_stack[:level - 1] + [text.strip()]
             element = Element(element_id='el_'+hashlib.sha256(identity.encode()).hexdigest()[:24],
-                document_id=origin['document_id'],version_id='ver_'+origin['source_sha256'][:24],kind=kind,
-                order=index,raw_text=text,heading_path=[],source=location,
+                document_id=origin['document_id'],version_id=version_id,kind=kind,
+                order=index,raw_text=text,heading_path=list(heading_stack),source=location,
                 image_ref=f'{sample["sample_id"]}/{asset}' if asset else None)
             elements.append({"element":element.model_dump(),"provider_page_idx":page_idx,"provider_type":type_,
                 "provider_bbox":row.get("bbox"),"bbox_interpreted":False,"archive_image_member":asset,
@@ -103,3 +109,49 @@ def normalize_archive(content: bytes, sample: dict, max_unpacked=67_108_864) -> 
             "elements":elements,"warnings":warnings,"mapped_elements":len(elements),
             "source_precision":"page_or_original_image","quality_review":"pending",
             "status":"mapped_with_warnings" if warnings else "mapped"}
+
+
+def materialize_archive_assets(content: bytes, normalized: dict, project_root: Path,
+                               processing_version_id: str) -> dict:
+    """Persist only image members referenced by normalized elements.
+
+    The parser archive is untrusted.  ``normalize_archive`` and
+    ``inspect_result_archive`` have already rejected traversal, encrypted
+    entries and ambiguous structures; this function still resolves every
+    target below one dedicated derived-data root and never calls extractall.
+    """
+    allowed_suffixes = {".png", ".jpg", ".jpeg"}
+    asset_root = (project_root / "data/derived/mineru_assets" / processing_version_id).resolve()
+    asset_root.mkdir(parents=True, exist_ok=True)
+    with ZipFile(BytesIO(content)) as archive:
+        available = set(archive.namelist())
+        for row in normalized.get("elements", []):
+            member = row.get("archive_image_member")
+            if not member:
+                continue
+            pure = PurePosixPath(member)
+            if (member not in available or pure.is_absolute() or ".." in pure.parts
+                    or pure.suffix.lower() not in allowed_suffixes):
+                raise AppError("invalid_image_reference", "解析图片资源不安全或格式不受支持", 502)
+            target = (asset_root / Path(*pure.parts)).resolve()
+            if not target.is_relative_to(asset_root):
+                raise AppError("invalid_image_reference", "解析图片资源越界", 502)
+            payload = archive.read(member)
+            if not payload:
+                raise AppError("invalid_image_resource", "解析图片资源为空", 502)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                if hashlib.sha256(target.read_bytes()).digest() != hashlib.sha256(payload).digest():
+                    raise AppError("parser_asset_conflict", "同一处理版本的图片产物发生冲突", 409)
+            else:
+                temporary = target.with_suffix(target.suffix + ".tmp")
+                temporary.write_bytes(payload)
+                temporary.replace(target)
+            relative = target.relative_to(project_root.resolve()).as_posix()
+            row["element"]["image_ref"] = relative
+            row["materialized_asset"] = {
+                "path": relative,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+                "byte_size": len(payload),
+            }
+    return normalized

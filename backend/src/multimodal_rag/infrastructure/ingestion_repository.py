@@ -34,7 +34,8 @@ def _processing_id(version_id: str, parser_version: str, profile_sha256: str) ->
 
 def persist_preview(settings: Settings, preview: PreviewResult, assessment: dict,
                     *, profile: dict[str, Any] | None = None,
-                    job_id: str | None = None) -> IngestionPersistenceResult:
+                    job_id: str | None = None,
+                    element_metadata: list[dict[str, Any]] | None = None) -> IngestionPersistenceResult:
     """Persist one deterministic local parse; repeat calls are idempotent.
 
     `profile` must describe processing inputs, not answers or evaluation labels.
@@ -90,11 +91,24 @@ def persist_preview(settings: Settings, preview: PreviewResult, assessment: dict
                 (processing_id, preview.document.document_id, preview.version.version_id, preview.parser_version,
                  profile_sha, Jsonb(profile), quality, len(preview.elements), len(preview.warnings)),
             )
+            metadata_by_order = {
+                int(row["element"]["order"]): row for row in (element_metadata or [])
+                if isinstance(row, dict) and isinstance(row.get("element"), dict)
+                and type(row["element"].get("order")) is int
+            }
             for element in preview.elements:
                 identity = hashlib.sha256(f"{processing_id}:{element.order}".encode()).hexdigest()[:24]
                 element_id = "el_" + identity
-                index_eligible = bool(element.raw_text.strip() or element.image_ref)
-                excluded_reason = None if index_eligible else "empty_element"
+                metadata = metadata_by_order.get(element.order, {})
+                default_eligible = bool(element.raw_text.strip() or element.image_ref)
+                index_eligible = metadata.get("index_eligible", default_eligible)
+                if not isinstance(index_eligible, bool):
+                    raise AppError("invalid_element_policy", "元素索引策略格式不正确", 422)
+                excluded_reason = metadata.get("excluded_reason")
+                if excluded_reason is not None and not isinstance(excluded_reason, str):
+                    raise AppError("invalid_element_policy", "元素排除原因格式不正确", 422)
+                if not index_eligible and not excluded_reason:
+                    excluded_reason = "empty_element"
                 conn.execute(
                     "INSERT INTO mrag.elements(element_id,document_id,version_id,processing_version_id,parser_version,"
                     "kind,ordinal,raw_text,heading_path,source,image_ref,generated_description,index_eligible,excluded_reason) VALUES "

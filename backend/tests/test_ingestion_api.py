@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 from multimodal_rag.api.app import create_app
@@ -54,3 +56,19 @@ def test_run_ingestion_job_is_idempotent_after_completion(monkeypatch, settings)
     assert response.status_code == 200
     assert response.json()["result"] is None
     assert response.json()["job"]["status"] == "succeeded"
+
+
+def test_pdf_run_requires_explicit_live_confirmation(monkeypatch, settings):
+    monkeypatch.setattr("multimodal_rag.api.app.get_job",
+                        lambda current_settings, job_id: {
+                            "job_id": job_id, "document_id": "pdf_demo",
+                            "status": "pending", "stage": "queued",
+                        })
+    monkeypatch.setattr(
+        "multimodal_rag.api.app.WhitelistDocumentReader.read_source",
+        lambda self, document_id: (SimpleNamespace(format="pdf"), b"%PDF-fixture"),
+    )
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/v1/ingestion/jobs/job_pdf/run", json={})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "live_confirmation_required"
